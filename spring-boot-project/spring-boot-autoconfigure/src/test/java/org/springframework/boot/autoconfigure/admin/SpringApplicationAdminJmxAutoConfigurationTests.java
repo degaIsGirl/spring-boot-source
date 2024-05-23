@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,14 +43,13 @@ import org.springframework.jmx.export.MBeanExporter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for {@link SpringApplicationAdminJmxAutoConfiguration}.
  *
  * @author Stephane Nicoll
  * @author Andy Wilkinson
- * @author Nguyen Bao Sach
  */
 class SpringApplicationAdminJmxAutoConfigurationTests {
 
@@ -61,10 +60,17 @@ class SpringApplicationAdminJmxAutoConfigurationTests {
 	private final MBeanServer server = ManagementFactory.getPlatformMBeanServer();
 
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withConfiguration(AutoConfigurations.of(SpringApplicationAdminJmxAutoConfiguration.class));
+			.withConfiguration(AutoConfigurations.of(MultipleMBeanExportersConfiguration.class,
+					SpringApplicationAdminJmxAutoConfiguration.class));
 
 	@Test
-	void notRegisteredWhenThereAreNoMBeanExporter() {
+	void notRegisteredByDefault() {
+		this.contextRunner.run((context) -> assertThatExceptionOfType(InstanceNotFoundException.class)
+				.isThrownBy(() -> this.server.getObjectInstance(createDefaultObjectName())));
+	}
+
+	@Test
+	void registeredWithProperty() {
 		this.contextRunner.withPropertyValues(ENABLE_ADMIN_PROP).run((context) -> {
 			ObjectName objectName = createDefaultObjectName();
 			ObjectInstance objectInstance = this.server.getObjectInstance(objectName);
@@ -73,50 +79,30 @@ class SpringApplicationAdminJmxAutoConfigurationTests {
 	}
 
 	@Test
-	void notRegisteredByDefaultWhenThereAreMultipleMBeanExporters() {
-		this.contextRunner.withUserConfiguration(MultipleMBeanExportersConfiguration.class)
-			.run((context) -> assertThatExceptionOfType(InstanceNotFoundException.class)
-				.isThrownBy(() -> this.server.getObjectInstance(createDefaultObjectName())));
-	}
-
-	@Test
-	void registeredWithPropertyWhenThereAreMultipleMBeanExporters() {
-		this.contextRunner.withUserConfiguration(MultipleMBeanExportersConfiguration.class)
-			.withPropertyValues(ENABLE_ADMIN_PROP)
-			.run((context) -> {
-				ObjectName objectName = createDefaultObjectName();
-				ObjectInstance objectInstance = this.server.getObjectInstance(objectName);
-				assertThat(objectInstance).as("Lifecycle bean should have been registered").isNotNull();
-			});
-	}
-
-	@Test
-	void registerWithCustomJmxNameWhenThereAreMultipleMBeanExporters() {
+	void registerWithCustomJmxName() {
 		String customJmxName = "org.acme:name=FooBar";
-		this.contextRunner.withUserConfiguration(MultipleMBeanExportersConfiguration.class)
-			.withSystemProperties("spring.application.admin.jmx-name=" + customJmxName)
-			.withPropertyValues(ENABLE_ADMIN_PROP)
-			.run((context) -> {
-				try {
-					this.server.getObjectInstance(createObjectName(customJmxName));
-				}
-				catch (InstanceNotFoundException ex) {
-					fail("Admin MBean should have been exposed with custom name");
-				}
-				assertThatExceptionOfType(InstanceNotFoundException.class)
-					.isThrownBy(() -> this.server.getObjectInstance(createDefaultObjectName()));
-			});
+		this.contextRunner.withSystemProperties("spring.application.admin.jmx-name=" + customJmxName)
+				.withPropertyValues(ENABLE_ADMIN_PROP).run((context) -> {
+					try {
+						this.server.getObjectInstance(createObjectName(customJmxName));
+					}
+					catch (InstanceNotFoundException ex) {
+						fail("Admin MBean should have been exposed with custom name");
+					}
+					assertThatExceptionOfType(InstanceNotFoundException.class)
+							.isThrownBy(() -> this.server.getObjectInstance(createDefaultObjectName()));
+				});
 	}
 
 	@Test
 	void registerWithSimpleWebApp() throws Exception {
 		try (ConfigurableApplicationContext context = new SpringApplicationBuilder()
-			.sources(ServletWebServerFactoryAutoConfiguration.class, DispatcherServletAutoConfiguration.class,
-					MultipleMBeanExportersConfiguration.class, SpringApplicationAdminJmxAutoConfiguration.class)
-			.run("--" + ENABLE_ADMIN_PROP, "--server.port=0")) {
+				.sources(ServletWebServerFactoryAutoConfiguration.class, DispatcherServletAutoConfiguration.class,
+						MultipleMBeanExportersConfiguration.class, SpringApplicationAdminJmxAutoConfiguration.class)
+				.run("--" + ENABLE_ADMIN_PROP, "--server.port=0")) {
 			assertThat(context).isInstanceOf(ServletWebServerApplicationContext.class);
 			assertThat(this.server.getAttribute(createDefaultObjectName(), "EmbeddedWebApplication"))
-				.isEqualTo(Boolean.TRUE);
+					.isEqualTo(Boolean.TRUE);
 			int expected = ((ServletWebServerApplicationContext) context).getWebServer().getPort();
 			String actual = getProperty(createDefaultObjectName(), "local.server.port");
 			assertThat(actual).isEqualTo(String.valueOf(expected));
@@ -126,15 +112,15 @@ class SpringApplicationAdminJmxAutoConfigurationTests {
 	@Test
 	void onlyRegisteredOnceWhenThereIsAChildContext() {
 		SpringApplicationBuilder parentBuilder = new SpringApplicationBuilder().web(WebApplicationType.NONE)
-			.sources(MultipleMBeanExportersConfiguration.class, SpringApplicationAdminJmxAutoConfiguration.class);
+				.sources(MultipleMBeanExportersConfiguration.class, SpringApplicationAdminJmxAutoConfiguration.class);
 		SpringApplicationBuilder childBuilder = parentBuilder
-			.child(MultipleMBeanExportersConfiguration.class, SpringApplicationAdminJmxAutoConfiguration.class)
-			.web(WebApplicationType.NONE);
+				.child(MultipleMBeanExportersConfiguration.class, SpringApplicationAdminJmxAutoConfiguration.class)
+				.web(WebApplicationType.NONE);
 		try (ConfigurableApplicationContext parent = parentBuilder.run("--" + ENABLE_ADMIN_PROP);
 				ConfigurableApplicationContext child = childBuilder.run("--" + ENABLE_ADMIN_PROP)) {
 			BeanFactoryUtils.beanOfType(parent.getBeanFactory(), SpringApplicationAdminMXBeanRegistrar.class);
 			assertThatExceptionOfType(NoSuchBeanDefinitionException.class).isThrownBy(() -> BeanFactoryUtils
-				.beanOfType(child.getBeanFactory(), SpringApplicationAdminMXBeanRegistrar.class));
+					.beanOfType(child.getBeanFactory(), SpringApplicationAdminMXBeanRegistrar.class));
 		}
 	}
 

@@ -19,7 +19,7 @@ package smoketest.test.service;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Properties for the service.
+ * Properties for the services.
  *
  * @author Phillip Webb
  */

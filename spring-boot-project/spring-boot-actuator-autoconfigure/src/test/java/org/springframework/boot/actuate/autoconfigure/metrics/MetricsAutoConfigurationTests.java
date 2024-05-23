@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import io.micrometer.core.instrument.config.MeterFilterReply;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
-import org.springframework.boot.actuate.autoconfigure.metrics.MetricsAutoConfiguration.MeterRegistryCloser;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -34,19 +33,18 @@ import org.springframework.core.annotation.Order;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 /**
  * Tests for {@link MetricsAutoConfiguration}.
  *
  * @author Andy Wilkinson
- * @author Moritz Halbritter
  */
 class MetricsAutoConfigurationTests {
 
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withConfiguration(AutoConfigurations.of(MetricsAutoConfiguration.class));
+			.withConfiguration(AutoConfigurations.of(MetricsAutoConfiguration.class));
 
 	@Test
 	void autoConfiguresAClock() {
@@ -56,7 +54,7 @@ class MetricsAutoConfigurationTests {
 	@Test
 	void allowsACustomClockToBeUsed() {
 		this.contextRunner.withUserConfiguration(CustomClockConfiguration.class)
-			.run((context) -> assertThat(context).hasSingleBean(Clock.class).hasBean("customClock"));
+				.run((context) -> assertThat(context).hasSingleBean(Clock.class).hasBean("customClock"));
 	}
 
 	@SuppressWarnings("unchecked")
@@ -69,23 +67,8 @@ class MetricsAutoConfigurationTests {
 			assertThat(filters[0].accept((Meter.Id) null)).isEqualTo(MeterFilterReply.DENY);
 			assertThat(filters[1]).isInstanceOf(PropertiesMeterFilter.class);
 			assertThat(filters[2].accept((Meter.Id) null)).isEqualTo(MeterFilterReply.ACCEPT);
-			then((MeterBinder) context.getBean("meterBinder")).should().bindTo(meterRegistry);
-			then(context.getBean(MeterRegistryCustomizer.class)).should().customize(meterRegistry);
-		});
-	}
-
-	@Test
-	void shouldSupplyMeterRegistryCloser() {
-		this.contextRunner.run((context) -> assertThat(context).hasSingleBean(MeterRegistryCloser.class));
-	}
-
-	@Test
-	void meterRegistryCloserShouldCloseRegistryOnShutdown() {
-		this.contextRunner.withUserConfiguration(MeterRegistryConfiguration.class).run((context) -> {
-			MeterRegistry meterRegistry = context.getBean(MeterRegistry.class);
-			assertThat(meterRegistry.isClosed()).isFalse();
-			context.close();
-			assertThat(meterRegistry.isClosed()).isTrue();
+			verify((MeterBinder) context.getBean("meterBinder")).bindTo(meterRegistry);
+			verify(context.getBean(MeterRegistryCustomizer.class)).customize(meterRegistry);
 		});
 	}
 

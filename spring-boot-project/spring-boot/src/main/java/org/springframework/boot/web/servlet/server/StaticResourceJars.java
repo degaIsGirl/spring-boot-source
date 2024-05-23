@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,13 +42,12 @@ class StaticResourceJars {
 
 	List<URL> getUrls() {
 		ClassLoader classLoader = getClass().getClassLoader();
-		if (classLoader instanceof URLClassLoader urlClassLoader) {
-			return getUrlsFrom(urlClassLoader.getURLs());
+		if (classLoader instanceof URLClassLoader) {
+			return getUrlsFrom(((URLClassLoader) classLoader).getURLs());
 		}
 		else {
 			return getUrlsFrom(Stream.of(ManagementFactory.getRuntimeMXBean().getClassPath().split(File.pathSeparator))
-				.map(this::toUrl)
-				.toArray(URL[]::new));
+					.map(this::toUrl).toArray(URL[]::new));
 		}
 	}
 
@@ -108,14 +107,14 @@ class StaticResourceJars {
 	}
 
 	private void addUrlConnection(List<URL> urls, URL url, URLConnection connection) {
-		if (connection instanceof JarURLConnection jarURLConnection && isResourcesJar(jarURLConnection)) {
+		if (connection instanceof JarURLConnection && isResourcesJar((JarURLConnection) connection)) {
 			urls.add(url);
 		}
 	}
 
 	private boolean isResourcesJar(JarURLConnection connection) {
 		try {
-			return isResourcesJar(connection.getJarFile(), !connection.getUseCaches());
+			return isResourcesJar(connection.getJarFile());
 		}
 		catch (IOException ex) {
 			return false;
@@ -124,21 +123,19 @@ class StaticResourceJars {
 
 	private boolean isResourcesJar(File file) {
 		try {
-			return isResourcesJar(new JarFile(file), true);
+			return isResourcesJar(new JarFile(file));
 		}
 		catch (IOException | InvalidPathException ex) {
 			return false;
 		}
 	}
 
-	private boolean isResourcesJar(JarFile jarFile, boolean closeJarFile) throws IOException {
+	private boolean isResourcesJar(JarFile jar) throws IOException {
 		try {
-			return jarFile.getName().endsWith(".jar") && (jarFile.getJarEntry("META-INF/resources") != null);
+			return jar.getName().endsWith(".jar") && (jar.getJarEntry("META-INF/resources") != null);
 		}
 		finally {
-			if (closeJarFile) {
-				jarFile.close();
-			}
+			jar.close();
 		}
 	}
 

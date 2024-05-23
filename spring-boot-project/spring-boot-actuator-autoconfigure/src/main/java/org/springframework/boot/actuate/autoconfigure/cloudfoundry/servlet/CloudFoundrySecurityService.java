@@ -35,7 +35,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 /**
- * Cloud Foundry security service to handle REST calls to the cloud controller and UAA.
+ * Cloud Foundry security services to handle REST calls to the cloud controller and UAA.
  *
  * @author Madhura Bhave
  */

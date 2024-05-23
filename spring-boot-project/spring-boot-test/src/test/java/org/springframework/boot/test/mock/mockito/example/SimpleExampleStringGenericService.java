@@ -17,7 +17,7 @@
 package org.springframework.boot.test.mock.mockito.example;
 
 /**
- * Example generic service implementation for spy tests.
+ * Example generic services implementation for spy tests.
  *
  * @author Phillip Webb
  */

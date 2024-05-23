@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,17 +22,18 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIOException;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 /**
  * Tests for {@link BindResult}.
@@ -40,7 +41,6 @@ import static org.mockito.BDDMockito.then;
  * @author Phillip Webb
  * @author Madhura Bhave
  */
-@ExtendWith(MockitoExtension.class)
 class BindResultTests {
 
 	@Mock
@@ -52,6 +52,11 @@ class BindResultTests {
 	@Mock
 	private Supplier<String> supplier;
 
+	@BeforeEach
+	void setup() {
+		MockitoAnnotations.initMocks(this);
+	}
+
 	@Test
 	void getWhenHasValueShouldReturnValue() {
 		BindResult<String> result = BindResult.of("foo");
@@ -62,7 +67,7 @@ class BindResultTests {
 	void getWhenHasNoValueShouldThrowException() {
 		BindResult<String> result = BindResult.of(null);
 		assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(result::get)
-			.withMessageContaining("No value bound");
+				.withMessageContaining("No value bound");
 	}
 
 	@Test
@@ -81,28 +86,28 @@ class BindResultTests {
 	void ifBoundWhenConsumerIsNullShouldThrowException() {
 		BindResult<String> result = BindResult.of("foo");
 		assertThatIllegalArgumentException().isThrownBy(() -> result.ifBound(null))
-			.withMessageContaining("Consumer must not be null");
+				.withMessageContaining("Consumer must not be null");
 	}
 
 	@Test
 	void ifBoundWhenHasValueShouldCallConsumer() {
 		BindResult<String> result = BindResult.of("foo");
 		result.ifBound(this.consumer);
-		then(this.consumer).should().accept("foo");
+		verify(this.consumer).accept("foo");
 	}
 
 	@Test
 	void ifBoundWhenHasNoValueShouldNotCallConsumer() {
 		BindResult<String> result = BindResult.of(null);
 		result.ifBound(this.consumer);
-		then(this.consumer).shouldHaveNoInteractions();
+		verifyNoInteractions(this.consumer);
 	}
 
 	@Test
 	void mapWhenMapperIsNullShouldThrowException() {
 		BindResult<String> result = BindResult.of("foo");
 		assertThatIllegalArgumentException().isThrownBy(() -> result.map(null))
-			.withMessageContaining("Mapper must not be null");
+				.withMessageContaining("Mapper must not be null");
 	}
 
 	@Test
@@ -116,7 +121,7 @@ class BindResultTests {
 	void mapWhenHasNoValueShouldNotCallMapper() {
 		BindResult<String> result = BindResult.of(null);
 		result.map(this.mapper);
-		then(this.mapper).shouldHaveNoInteractions();
+		verifyNoInteractions(this.mapper);
 	}
 
 	@Test
@@ -135,7 +140,7 @@ class BindResultTests {
 	void orElseGetWhenHasValueShouldReturnValue() {
 		BindResult<String> result = BindResult.of("foo");
 		assertThat(result.orElseGet(this.supplier)).isEqualTo("foo");
-		then(this.supplier).shouldHaveNoInteractions();
+		verifyNoInteractions(this.supplier);
 	}
 
 	@Test
@@ -146,13 +151,36 @@ class BindResultTests {
 	}
 
 	@Test
+	@Deprecated
+	@SuppressWarnings("deprecation")
+	void orElseCreateWhenTypeIsNullShouldThrowException() {
+		BindResult<String> result = BindResult.of("foo");
+		assertThatIllegalArgumentException().isThrownBy(() -> result.orElseCreate(null))
+				.withMessageContaining("Type must not be null");
+	}
+
+	@Test
+	@Deprecated
+	void orElseCreateWhenHasValueShouldReturnValue() {
+		BindResult<ExampleBean> result = BindResult.of(new ExampleBean("foo"));
+		assertThat(result.orElseCreate(ExampleBean.class).getValue()).isEqualTo("foo");
+	}
+
+	@Test
+	@Deprecated
+	void orElseCreateWhenHasValueNoShouldReturnCreatedValue() {
+		BindResult<ExampleBean> result = BindResult.of(null);
+		assertThat(result.orElseCreate(ExampleBean.class).getValue()).isEqualTo("new");
+	}
+
+	@Test
 	void orElseThrowWhenHasValueShouldReturnValue() throws Exception {
 		BindResult<String> result = BindResult.of("foo");
 		assertThat(result.orElseThrow(IOException::new)).isEqualTo("foo");
 	}
 
 	@Test
-	void orElseThrowWhenHasNoValueShouldThrowException() {
+	void orElseThrowWhenHasNoValueShouldThrowException() throws Exception {
 		BindResult<String> result = BindResult.of(null);
 		assertThatIOException().isThrownBy(() -> result.orElseThrow(IOException::new));
 	}
@@ -163,7 +191,7 @@ class BindResultTests {
 		BindResult<?> result2 = BindResult.of("foo");
 		BindResult<?> result3 = BindResult.of("bar");
 		BindResult<?> result4 = BindResult.of(null);
-		assertThat(result1).hasSameHashCodeAs(result2);
+		assertThat(result1.hashCode()).isEqualTo(result2.hashCode());
 		assertThat(result1).isEqualTo(result1).isEqualTo(result2).isNotEqualTo(result3).isNotEqualTo(result4);
 	}
 

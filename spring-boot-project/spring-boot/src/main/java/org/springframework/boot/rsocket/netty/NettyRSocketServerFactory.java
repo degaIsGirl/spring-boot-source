@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,9 +23,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
+import io.rsocket.RSocketFactory;
+import io.rsocket.RSocketFactory.ServerRSocketFactory;
 import io.rsocket.SocketAcceptor;
 import io.rsocket.transport.ServerTransport;
 import io.rsocket.transport.netty.server.CloseableChannel;
@@ -33,39 +33,26 @@ import io.rsocket.transport.netty.server.TcpServerTransport;
 import io.rsocket.transport.netty.server.WebsocketServerTransport;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServer;
-import reactor.netty.tcp.AbstractProtocolSslContextSpec;
 import reactor.netty.tcp.TcpServer;
 
-import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.boot.rsocket.server.ConfigurableRSocketServerFactory;
 import org.springframework.boot.rsocket.server.RSocketServer;
 import org.springframework.boot.rsocket.server.RSocketServerCustomizer;
 import org.springframework.boot.rsocket.server.RSocketServerFactory;
-import org.springframework.boot.ssl.SslBundle;
-import org.springframework.boot.ssl.SslBundles;
-import org.springframework.boot.web.embedded.netty.SslServerCustomizer;
-import org.springframework.boot.web.server.Ssl;
-import org.springframework.boot.web.server.Ssl.ClientAuth;
-import org.springframework.boot.web.server.Ssl.ServerNameSslBundle;
-import org.springframework.boot.web.server.WebServerSslBundle;
-import org.springframework.http.client.ReactorResourceFactory;
+import org.springframework.boot.rsocket.server.ServerRSocketFactoryProcessor;
+import org.springframework.http.client.reactive.ReactorResourceFactory;
 import org.springframework.util.Assert;
-import org.springframework.util.unit.DataSize;
 
 /**
  * {@link RSocketServerFactory} that can be used to create {@link RSocketServer}s backed
  * by Netty.
  *
  * @author Brian Clozel
- * @author Chris Bono
- * @author Scott Frederick
  * @since 2.2.0
  */
 public class NettyRSocketServerFactory implements RSocketServerFactory, ConfigurableRSocketServerFactory {
 
 	private int port = 9898;
-
-	private DataSize fragmentSize;
 
 	private InetAddress address;
 
@@ -75,20 +62,13 @@ public class NettyRSocketServerFactory implements RSocketServerFactory, Configur
 
 	private Duration lifecycleTimeout;
 
+	private List<ServerRSocketFactoryProcessor> socketFactoryProcessors = new ArrayList<>();
+
 	private List<RSocketServerCustomizer> rSocketServerCustomizers = new ArrayList<>();
-
-	private Ssl ssl;
-
-	private SslBundles sslBundles;
 
 	@Override
 	public void setPort(int port) {
 		this.port = port;
-	}
-
-	@Override
-	public void setFragmentSize(DataSize fragmentSize) {
-		this.fragmentSize = fragmentSize;
 	}
 
 	@Override
@@ -101,22 +81,40 @@ public class NettyRSocketServerFactory implements RSocketServerFactory, Configur
 		this.transport = transport;
 	}
 
-	@Override
-	public void setSsl(Ssl ssl) {
-		this.ssl = ssl;
-	}
-
-	@Override
-	public void setSslBundles(SslBundles sslBundles) {
-		this.sslBundles = sslBundles;
-	}
-
 	/**
 	 * Set the {@link ReactorResourceFactory} to get the shared resources from.
 	 * @param resourceFactory the server resources
 	 */
 	public void setResourceFactory(ReactorResourceFactory resourceFactory) {
 		this.resourceFactory = resourceFactory;
+	}
+
+	/**
+	 * Set {@link ServerRSocketFactoryProcessor}s that should be called to process the
+	 * {@link ServerRSocketFactory} while building the server. Calling this method will
+	 * replace any existing processors.
+	 * @param socketFactoryProcessors processors to apply before the server starts
+	 * @deprecated in favor of {@link #setRSocketServerCustomizers(Collection)} as of
+	 * 2.2.7
+	 */
+	@Deprecated
+	public void setSocketFactoryProcessors(
+			Collection<? extends ServerRSocketFactoryProcessor> socketFactoryProcessors) {
+		Assert.notNull(socketFactoryProcessors, "SocketFactoryProcessors must not be null");
+		this.socketFactoryProcessors = new ArrayList<>(socketFactoryProcessors);
+	}
+
+	/**
+	 * Add {@link ServerRSocketFactoryProcessor}s that should be called to process the
+	 * {@link ServerRSocketFactory} while building the server.
+	 * @param socketFactoryProcessors processors to apply before the server starts
+	 * @deprecated in favor of
+	 * {@link #addRSocketServerCustomizers(RSocketServerCustomizer...)} as of 2.2.7
+	 */
+	@Deprecated
+	public void addSocketFactoryProcessors(ServerRSocketFactoryProcessor... socketFactoryProcessors) {
+		Assert.notNull(socketFactoryProcessors, "SocketFactoryProcessors must not be null");
+		this.socketFactoryProcessors.addAll(Arrays.asList(socketFactoryProcessors));
 	}
 
 	/**
@@ -145,25 +143,22 @@ public class NettyRSocketServerFactory implements RSocketServerFactory, Configur
 	/**
 	 * Set the maximum amount of time that should be waited when starting or stopping the
 	 * server.
-	 * @param lifecycleTimeout the lifecycle timeout
+	 * @param lifecycleTimeout the ioc timeout
 	 */
 	public void setLifecycleTimeout(Duration lifecycleTimeout) {
 		this.lifecycleTimeout = lifecycleTimeout;
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public NettyRSocketServer create(SocketAcceptor socketAcceptor) {
 		ServerTransport<CloseableChannel> transport = createTransport();
 		io.rsocket.core.RSocketServer server = io.rsocket.core.RSocketServer.create(socketAcceptor);
-		configureServer(server);
+		RSocketFactory.ServerRSocketFactory factory = new ServerRSocketFactory(server);
+		this.rSocketServerCustomizers.forEach((customizer) -> customizer.customize(server));
+		this.socketFactoryProcessors.forEach((processor) -> processor.process(factory));
 		Mono<CloseableChannel> starter = server.bind(transport);
 		return new NettyRSocketServer(starter, this.lifecycleTimeout);
-	}
-
-	private void configureServer(io.rsocket.core.RSocketServer server) {
-		PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
-		map.from(this.fragmentSize).asInt(DataSize::toBytes).to(server::fragment);
-		this.rSocketServerCustomizers.forEach((customizer) -> customizer.customize(server));
 	}
 
 	private ServerTransport<CloseableChannel> createTransport() {
@@ -174,45 +169,21 @@ public class NettyRSocketServerFactory implements RSocketServerFactory, Configur
 	}
 
 	private ServerTransport<CloseableChannel> createWebSocketTransport() {
-		HttpServer httpServer = HttpServer.create();
 		if (this.resourceFactory != null) {
-			httpServer = httpServer.runOn(this.resourceFactory.getLoopResources());
+			HttpServer httpServer = HttpServer.create().tcpConfiguration((tcpServer) -> tcpServer
+					.runOn(this.resourceFactory.getLoopResources()).addressSupplier(this::getListenAddress));
+			return WebsocketServerTransport.create(httpServer);
 		}
-		if (Ssl.isEnabled(this.ssl)) {
-			httpServer = customizeSslConfiguration(httpServer);
-		}
-		return WebsocketServerTransport.create(httpServer.bindAddress(this::getListenAddress));
-	}
-
-	private HttpServer customizeSslConfiguration(HttpServer httpServer) {
-		return new SslServerCustomizer(null, this.ssl.getClientAuth(), getSslBundle(), getServerNameSslBundles())
-			.apply(httpServer);
+		return WebsocketServerTransport.create(getListenAddress());
 	}
 
 	private ServerTransport<CloseableChannel> createTcpTransport() {
-		TcpServer tcpServer = TcpServer.create();
 		if (this.resourceFactory != null) {
-			tcpServer = tcpServer.runOn(this.resourceFactory.getLoopResources());
+			TcpServer tcpServer = TcpServer.create().runOn(this.resourceFactory.getLoopResources())
+					.addressSupplier(this::getListenAddress);
+			return TcpServerTransport.create(tcpServer);
 		}
-		if (Ssl.isEnabled(this.ssl)) {
-			tcpServer = new TcpSslServerCustomizer(this.ssl.getClientAuth(), getSslBundle(), getServerNameSslBundles())
-				.apply(tcpServer);
-		}
-		return TcpServerTransport.create(tcpServer.bindAddress(this::getListenAddress));
-	}
-
-	private SslBundle getSslBundle() {
-		return WebServerSslBundle.get(this.ssl, this.sslBundles);
-	}
-
-	protected final Map<String, SslBundle> getServerNameSslBundles() {
-		return this.ssl.getServerNameBundles()
-			.stream()
-			.collect(Collectors.toMap(Ssl.ServerNameSslBundle::serverName, this::getBundle));
-	}
-
-	private SslBundle getBundle(ServerNameSslBundle serverNameSslBundle) {
-		return this.sslBundles.getBundle(serverNameSslBundle.bundle());
+		return TcpServerTransport.create(getListenAddress());
 	}
 
 	private InetSocketAddress getListenAddress() {
@@ -220,24 +191,6 @@ public class NettyRSocketServerFactory implements RSocketServerFactory, Configur
 			return new InetSocketAddress(this.address.getHostAddress(), this.port);
 		}
 		return new InetSocketAddress(this.port);
-	}
-
-	private static final class TcpSslServerCustomizer
-			extends org.springframework.boot.web.embedded.netty.SslServerCustomizer {
-
-		private final SslBundle sslBundle;
-
-		private TcpSslServerCustomizer(ClientAuth clientAuth, SslBundle sslBundle,
-				Map<String, SslBundle> serverNameSslBundles) {
-			super(null, clientAuth, sslBundle, serverNameSslBundles);
-			this.sslBundle = sslBundle;
-		}
-
-		private TcpServer apply(TcpServer server) {
-			AbstractProtocolSslContextSpec<?> sslContextSpec = createSslContextSpec(this.sslBundle);
-			return server.secure((spec) -> spec.sslContext(sslContextSpec));
-		}
-
 	}
 
 }

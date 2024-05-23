@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2021 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.sql.init.DatabaseInitializationMode;
+import org.springframework.boot.jdbc.DataSourceInitializationMode;
 
 /**
  * Configuration properties for the Quartz Scheduler integration.
@@ -142,15 +142,9 @@ public class QuartzProperties {
 		private String schema = DEFAULT_SCHEMA_LOCATION;
 
 		/**
-		 * Platform to use in initialization scripts if the @@platform@@ placeholder is
-		 * used. Auto-detected by default.
-		 */
-		private String platform;
-
-		/**
 		 * Database schema initialization mode.
 		 */
-		private DatabaseInitializationMode initializeSchema = DatabaseInitializationMode.EMBEDDED;
+		private DataSourceInitializationMode initializeSchema = DataSourceInitializationMode.EMBEDDED;
 
 		/**
 		 * Prefixes for single-line comments in SQL initialization scripts.
@@ -165,19 +159,11 @@ public class QuartzProperties {
 			this.schema = schema;
 		}
 
-		public String getPlatform() {
-			return this.platform;
-		}
-
-		public void setPlatform(String platform) {
-			this.platform = platform;
-		}
-
-		public DatabaseInitializationMode getInitializeSchema() {
+		public DataSourceInitializationMode getInitializeSchema() {
 			return this.initializeSchema;
 		}
 
-		public void setInitializeSchema(DatabaseInitializationMode initializeSchema) {
+		public void setInitializeSchema(DataSourceInitializationMode initializeSchema) {
 			this.initializeSchema = initializeSchema;
 		}
 

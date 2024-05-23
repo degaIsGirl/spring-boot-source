@@ -25,7 +25,7 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
  * <p>
  * Beware: calls to this interface are usually made from a
  * {@link WebServerFactoryCustomizerBeanPostProcessor} which is a
- * {@link BeanPostProcessor} (so called very early in the ApplicationContext lifecycle).
+ * {@link BeanPostProcessor} (so called very early in the ApplicationContext ioc).
  * It might be safer to lookup dependencies lazily in the enclosing BeanFactory rather
  * than injecting them with {@code @Autowired}.
  *

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,10 @@
 
 package org.springframework.boot;
 
-import java.util.ArrayList;
 import java.util.Collection;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -32,20 +30,11 @@ import org.springframework.core.Ordered;
  * {@link BeanFactoryPostProcessor} to set lazy-init on bean definitions that are not
  * {@link LazyInitializationExcludeFilter excluded} and have not already had a value
  * explicitly set.
- * <p>
- * Note that {@link SmartInitializingSingleton SmartInitializingSingletons} are
- * automatically excluded from lazy initialization to ensure that their
- * {@link SmartInitializingSingleton#afterSingletonsInstantiated() callback method} is
- * invoked.
- * <p>
- * Beans that are in the {@link BeanDefinition#ROLE_INFRASTRUCTURE infrastructure role}
- * are automatically excluded from lazy initialization, too.
  *
  * @author Andy Wilkinson
  * @author Madhura Bhave
  * @author Tyler Van Gorder
  * @author Phillip Webb
- * @author Moritz Halbritter
  * @since 2.2.0
  * @see LazyInitializationExcludeFilter
  */
@@ -53,22 +42,15 @@ public final class LazyInitializationBeanFactoryPostProcessor implements BeanFac
 
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-		Collection<LazyInitializationExcludeFilter> filters = getFilters(beanFactory);
+		// Take care not to force the eager init of factory beans when getting filters
+		Collection<LazyInitializationExcludeFilter> filters = beanFactory
+				.getBeansOfType(LazyInitializationExcludeFilter.class, false, false).values();
 		for (String beanName : beanFactory.getBeanDefinitionNames()) {
 			BeanDefinition beanDefinition = beanFactory.getBeanDefinition(beanName);
-			if (beanDefinition instanceof AbstractBeanDefinition abstractBeanDefinition) {
-				postProcess(beanFactory, filters, beanName, abstractBeanDefinition);
+			if (beanDefinition instanceof AbstractBeanDefinition) {
+				postProcess(beanFactory, filters, beanName, (AbstractBeanDefinition) beanDefinition);
 			}
 		}
-	}
-
-	private Collection<LazyInitializationExcludeFilter> getFilters(ConfigurableListableBeanFactory beanFactory) {
-		// Take care not to force the eager init of factory beans when getting filters
-		ArrayList<LazyInitializationExcludeFilter> filters = new ArrayList<>(
-				beanFactory.getBeansOfType(LazyInitializationExcludeFilter.class, false, false).values());
-		filters.add(LazyInitializationExcludeFilter.forBeanTypes(SmartInitializingSingleton.class));
-		filters.add(new InfrastructureRoleLazyInitializationExcludeFilter());
-		return filters;
 	}
 
 	private void postProcess(ConfigurableListableBeanFactory beanFactory,
@@ -108,20 +90,6 @@ public final class LazyInitializationBeanFactoryPostProcessor implements BeanFac
 	@Override
 	public int getOrder() {
 		return Ordered.HIGHEST_PRECEDENCE;
-	}
-
-	/**
-	 * Excludes all {@link BeanDefinition bean definitions} which have the infrastructure
-	 * role from lazy initialization.
-	 */
-	private static final class InfrastructureRoleLazyInitializationExcludeFilter
-			implements LazyInitializationExcludeFilter {
-
-		@Override
-		public boolean isExcluded(String beanName, BeanDefinition beanDefinition, Class<?> beanType) {
-			return beanDefinition.getRole() == BeanDefinition.ROLE_INFRASTRUCTURE;
-		}
-
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,6 @@ import org.springframework.core.log.LogMessage;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.http.client.ClientHttpRequestFactory;
@@ -92,14 +91,14 @@ public class ClassPathChangeUploader implements ApplicationListener<ClassPathCha
 		try {
 			ClassLoaderFiles classLoaderFiles = getClassLoaderFiles(event);
 			byte[] bytes = serialize(classLoaderFiles);
-			performUpload(bytes, event);
+			performUpload(classLoaderFiles, bytes);
 		}
 		catch (IOException ex) {
 			throw new IllegalStateException(ex);
 		}
 	}
 
-	private void performUpload(byte[] bytes, ClassPathChangedEvent event) throws IOException {
+	private void performUpload(ClassLoaderFiles classLoaderFiles, byte[] bytes) throws IOException {
 		try {
 			while (true) {
 				try {
@@ -108,12 +107,11 @@ public class ClassPathChangeUploader implements ApplicationListener<ClassPathCha
 					headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
 					headers.setContentLength(bytes.length);
 					FileCopyUtils.copy(bytes, request.getBody());
-					logUpload(event);
-					try (ClientHttpResponse response = request.execute()) {
-						HttpStatusCode statusCode = response.getStatusCode();
-						Assert.state(statusCode == HttpStatus.OK,
-								() -> "Unexpected " + statusCode + " response uploading class files");
-					}
+					ClientHttpResponse response = request.execute();
+					HttpStatus statusCode = response.getStatusCode();
+					Assert.state(statusCode == HttpStatus.OK,
+							() -> "Unexpected " + statusCode + " response uploading class files");
+					logUpload(classLoaderFiles);
 					return;
 				}
 				catch (SocketException ex) {
@@ -130,8 +128,9 @@ public class ClassPathChangeUploader implements ApplicationListener<ClassPathCha
 		}
 	}
 
-	private void logUpload(ClassPathChangedEvent event) {
-		logger.info(LogMessage.format("Uploading %s", event.overview()));
+	private void logUpload(ClassLoaderFiles classLoaderFiles) {
+		int size = classLoaderFiles.size();
+		logger.info(LogMessage.format("Uploaded %s class %s", size, (size != 1) ? "resources" : "resource"));
 	}
 
 	private byte[] serialize(ClassLoaderFiles classLoaderFiles) throws IOException {
@@ -145,9 +144,9 @@ public class ClassPathChangeUploader implements ApplicationListener<ClassPathCha
 	private ClassLoaderFiles getClassLoaderFiles(ClassPathChangedEvent event) throws IOException {
 		ClassLoaderFiles files = new ClassLoaderFiles();
 		for (ChangedFiles changedFiles : event.getChangeSet()) {
-			String sourceDirectory = changedFiles.getSourceDirectory().getAbsolutePath();
+			String sourceFolder = changedFiles.getSourceFolder().getAbsolutePath();
 			for (ChangedFile changedFile : changedFiles) {
-				files.addFile(sourceDirectory, changedFile.getRelativeName(), asClassLoaderFile(changedFile));
+				files.addFile(sourceFolder, changedFile.getRelativeName(), asClassLoaderFile(changedFile));
 			}
 		}
 		return files;

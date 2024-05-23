@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,6 @@ package org.springframework.boot.testsupport.classpath;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 
-import org.springframework.util.ClassUtils;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.isA;
 
@@ -28,32 +26,20 @@ import static org.hamcrest.Matchers.isA;
  * Tests for {@link ModifiedClassPathExtension} excluding entries from the class path.
  *
  * @author Christoph Dreis
- * @author Andy Wilkinson
  */
-@ClassPathExclusions(files = "hibernate-validator-*.jar", packages = "java.net.http")
+@ClassPathExclusions("hibernate-validator-*.jar")
 class ModifiedClassPathExtensionExclusionsTests {
 
-	private static final String EXCLUDED_RESOURCE = "META-INF/services/jakarta.validation.spi.ValidationProvider";
+	private static final String EXCLUDED_RESOURCE = "META-INF/services/" + "javax.validation.spi.ValidationProvider";
 
 	@Test
-	void fileExclusionsAreFilteredFromTestClassClassLoader() {
+	void entriesAreFilteredFromTestClassClassLoader() {
 		assertThat(getClass().getClassLoader().getResource(EXCLUDED_RESOURCE)).isNull();
 	}
 
 	@Test
-	void fileExclusionsAreFilteredFromThreadContextClassLoader() {
+	void entriesAreFilteredFromThreadContextClassLoader() {
 		assertThat(Thread.currentThread().getContextClassLoader().getResource(EXCLUDED_RESOURCE)).isNull();
-	}
-
-	@Test
-	void packageExclusionsAreFilteredFromTestClassClassLoader() {
-		assertThat(ClassUtils.isPresent("java.net.http.HttpClient", getClass().getClassLoader())).isFalse();
-	}
-
-	@Test
-	void packageExclusionsAreFilteredFromThreadContextClassLoader() {
-		assertThat(ClassUtils.isPresent("java.net.http.HttpClient", Thread.currentThread().getContextClassLoader()))
-			.isFalse();
 	}
 
 	@Test

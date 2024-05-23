@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,8 @@ package org.springframework.boot.autoconfigure.websocket.servlet;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,28 +30,23 @@ import org.apache.tomcat.websocket.WsWebSocketContainer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.skyscreamer.jsonassert.JSONAssert;
 
 import org.springframework.boot.LazyInitializationBeanFactoryPostProcessor;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
-import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.servlet.DispatcherServletAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.servlet.ServletWebServerFactoryAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.util.TestPropertyValues;
+import org.springframework.boot.web.context.ServerPortInfoApplicationContextInitializer;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.task.AsyncTaskExecutor;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.messaging.converter.CompositeMessageConverter;
 import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.converter.SimpleMessageConverter;
 import org.springframework.messaging.simp.annotation.SubscribeMapping;
-import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
@@ -61,8 +54,8 @@ import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandler;
 import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
-import org.springframework.security.util.FieldUtils;
 import org.springframework.stereotype.Controller;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.config.annotation.DelegatingWebSocketMessageBrokerConfiguration;
@@ -77,17 +70,16 @@ import org.springframework.web.socket.sockjs.client.Transport;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for {@link WebSocketMessagingAutoConfiguration}.
  *
  * @author Andy Wilkinson
- * @author Lasse Wulff
  */
 class WebSocketMessagingAutoConfigurationTests {
 
-	private final AnnotationConfigServletWebServerApplicationContext context = new AnnotationConfigServletWebServerApplicationContext();
+	private AnnotationConfigServletWebServerApplicationContext context = new AnnotationConfigServletWebServerApplicationContext();
 
 	private SockJsClient sockJsClient;
 
@@ -101,16 +93,14 @@ class WebSocketMessagingAutoConfigurationTests {
 
 	@AfterEach
 	void tearDown() {
-		if (this.context.isActive()) {
-			this.context.close();
-		}
+		this.context.close();
 		this.sockJsClient.stop();
 	}
 
 	@Test
 	void basicMessagingWithJsonResponse() throws Throwable {
 		Object result = performStompSubscription("/app/json");
-		JSONAssert.assertEquals("{\"foo\" : 5,\"bar\" : \"baz\"}", new String((byte[]) result), true);
+		assertThat(new String((byte[]) result)).isEqualTo(String.format("{%n  \"foo\" : 5,%n  \"bar\" : \"baz\"%n}"));
 	}
 
 	@Test
@@ -130,7 +120,7 @@ class WebSocketMessagingAutoConfigurationTests {
 	void customizedConverterTypesMatchDefaultConverterTypes() {
 		List<MessageConverter> customizedConverters = getCustomizedConverters();
 		List<MessageConverter> defaultConverters = getDefaultConverters();
-		assertThat(customizedConverters).hasSameSizeAs(defaultConverters);
+		assertThat(customizedConverters.size()).isEqualTo(defaultConverters.size());
 		Iterator<MessageConverter> customizedIterator = customizedConverters.iterator();
 		Iterator<MessageConverter> defaultIterator = defaultConverters.iterator();
 		while (customizedIterator.hasNext()) {
@@ -138,47 +128,27 @@ class WebSocketMessagingAutoConfigurationTests {
 		}
 	}
 
-	@Test
-	void predefinedThreadExecutorIsSelectedForInboundChannel() throws Throwable {
-		AsyncTaskExecutor expectedExecutor = new SimpleAsyncTaskExecutor();
-		ChannelRegistration registration = new ChannelRegistration();
-		WebSocketMessagingAutoConfiguration.WebSocketMessageConverterConfiguration configuration = new WebSocketMessagingAutoConfiguration.WebSocketMessageConverterConfiguration(
-				new ObjectMapper(),
-				Map.of(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME, expectedExecutor));
-		configuration.configureClientInboundChannel(registration);
-		TaskExecutor executor = (TaskExecutor) FieldUtils.getFieldValue(registration, "executor");
-		assertThat(executor).isEqualTo(expectedExecutor);
-	}
-
-	@Test
-	void predefinedThreadExecutorIsSelectedForOutboundChannel() throws Throwable {
-		AsyncTaskExecutor expectedExecutor = new SimpleAsyncTaskExecutor();
-		ChannelRegistration registration = new ChannelRegistration();
-		WebSocketMessagingAutoConfiguration.WebSocketMessageConverterConfiguration configuration = new WebSocketMessagingAutoConfiguration.WebSocketMessageConverterConfiguration(
-				new ObjectMapper(),
-				Map.of(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME, expectedExecutor));
-		configuration.configureClientOutboundChannel(registration);
-		TaskExecutor executor = (TaskExecutor) FieldUtils.getFieldValue(registration, "executor");
-		assertThat(executor).isEqualTo(expectedExecutor);
-	}
-
 	private List<MessageConverter> getCustomizedConverters() {
 		List<MessageConverter> customizedConverters = new ArrayList<>();
 		WebSocketMessagingAutoConfiguration.WebSocketMessageConverterConfiguration configuration = new WebSocketMessagingAutoConfiguration.WebSocketMessageConverterConfiguration(
-				new ObjectMapper(), Collections.emptyMap());
+				new ObjectMapper());
 		configuration.configureMessageConverters(customizedConverters);
 		return customizedConverters;
 	}
 
+	@SuppressWarnings("unchecked")
 	private List<MessageConverter> getDefaultConverters() {
 		DelegatingWebSocketMessageBrokerConfiguration configuration = new DelegatingWebSocketMessageBrokerConfiguration();
-		CompositeMessageConverter compositeDefaultConverter = configuration.brokerMessageConverter();
-		return compositeDefaultConverter.getConverters();
+		// We shouldn't usually call this method directly since it's on a non-proxy config
+		CompositeMessageConverter compositeDefaultConverter = ReflectionTestUtils.invokeMethod(configuration,
+				"brokerMessageConverter");
+		return (List<MessageConverter>) ReflectionTestUtils.getField(compositeDefaultConverter, "converters");
 	}
 
 	private Object performStompSubscription(String topic) throws Throwable {
 		TestPropertyValues.of("server.port:0", "spring.jackson.serialization.indent-output:true").applyTo(this.context);
 		this.context.register(WebSocketMessagingConfiguration.class);
+		new ServerPortInfoApplicationContextInitializer().initialize(this.context);
 		this.context.refresh();
 		WebSocketStompClient stompClient = new WebSocketStompClient(this.sockJsClient);
 		final AtomicReference<Throwable> failure = new AtomicReference<>();
@@ -225,7 +195,8 @@ class WebSocketMessagingAutoConfigurationTests {
 		};
 
 		stompClient.setMessageConverter(new SimpleMessageConverter());
-		stompClient.connectAsync("ws://localhost:{port}/messaging", handler, this.context.getWebServer().getPort());
+		stompClient.connect("ws://localhost:{port}/messaging", handler,
+				this.context.getEnvironment().getProperty("local.server.port"));
 
 		if (!latch.await(30, TimeUnit.SECONDS)) {
 			if (failure.get() != null) {
@@ -288,9 +259,9 @@ class WebSocketMessagingAutoConfigurationTests {
 
 	public static class Data {
 
-		private final int foo;
+		private int foo;
 
-		private final String bar;
+		private String bar;
 
 		Data(int foo, String bar) {
 			this.foo = foo;

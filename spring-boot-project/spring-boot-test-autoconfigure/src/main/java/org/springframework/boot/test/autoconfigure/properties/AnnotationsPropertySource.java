@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import org.springframework.core.annotation.MergedAnnotationPredicates;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.core.annotation.MergedAnnotations.SearchStrategy;
 import org.springframework.core.env.EnumerablePropertySource;
-import org.springframework.test.context.TestContextAnnotationUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
@@ -59,39 +58,30 @@ public class AnnotationsPropertySource extends EnumerablePropertySource<Class<?>
 
 	private Map<String, Object> getProperties(Class<?> source) {
 		Map<String, Object> properties = new LinkedHashMap<>();
-		getProperties(source, properties);
+		MergedAnnotations.from(source, SearchStrategy.SUPERCLASS).stream()
+				.filter(MergedAnnotationPredicates.unique(MergedAnnotation::getType)).forEach((annotation) -> {
+					Class<Annotation> type = annotation.getType();
+					MergedAnnotation<?> typeMapping = MergedAnnotations.from(type).get(PropertyMapping.class,
+							MergedAnnotation::isDirectlyPresent);
+					String prefix = typeMapping.getValue(MergedAnnotation.VALUE, String.class).orElse("");
+					SkipPropertyMapping defaultSkip = typeMapping.getValue("skip", SkipPropertyMapping.class)
+							.orElse(SkipPropertyMapping.YES);
+					for (Method attribute : type.getDeclaredMethods()) {
+						collectProperties(prefix, defaultSkip, annotation, attribute, properties);
+					}
+				});
 		return properties;
 	}
 
-	private void getProperties(Class<?> source, Map<String, Object> properties) {
-		MergedAnnotations.from(source, SearchStrategy.SUPERCLASS)
-			.stream()
-			.filter(MergedAnnotationPredicates.unique(MergedAnnotation::getType))
-			.forEach((annotation) -> {
-				Class<Annotation> type = annotation.getType();
-				MergedAnnotation<?> typeMapping = MergedAnnotations.from(type)
-					.get(PropertyMapping.class, MergedAnnotation::isDirectlyPresent);
-				String prefix = typeMapping.getValue(MergedAnnotation.VALUE, String.class).orElse("");
-				SkipPropertyMapping defaultSkip = typeMapping.getValue("skip", SkipPropertyMapping.class)
-					.orElse(SkipPropertyMapping.YES);
-				for (Method attribute : type.getDeclaredMethods()) {
-					collectProperties(prefix, defaultSkip, annotation, attribute, properties);
-				}
-			});
-		if (TestContextAnnotationUtils.searchEnclosingClass(source)) {
-			getProperties(source.getEnclosingClass(), properties);
-		}
-	}
-
-	private void collectProperties(String prefix, SkipPropertyMapping skip, MergedAnnotation<?> annotation,
+	private void collectProperties(String prefix, SkipPropertyMapping defaultSkip, MergedAnnotation<?> annotation,
 			Method attribute, Map<String, Object> properties) {
 		MergedAnnotation<?> attributeMapping = MergedAnnotations.from(attribute).get(PropertyMapping.class);
-		skip = attributeMapping.getValue("skip", SkipPropertyMapping.class).orElse(skip);
+		SkipPropertyMapping skip = attributeMapping.getValue("skip", SkipPropertyMapping.class).orElse(defaultSkip);
 		if (skip == SkipPropertyMapping.YES) {
 			return;
 		}
 		Optional<Object> value = annotation.getValue(attribute.getName());
-		if (value.isEmpty()) {
+		if (!value.isPresent()) {
 			return;
 		}
 		if (skip == SkipPropertyMapping.ON_DEFAULT_VALUE) {
@@ -100,7 +90,7 @@ public class AnnotationsPropertySource extends EnumerablePropertySource<Class<?>
 			}
 		}
 		String name = getName(prefix, attributeMapping, attribute);
-		putProperties(name, skip, value.get(), properties);
+		putProperties(name, value.get(), properties);
 	}
 
 	private String getName(String prefix, MergedAnnotation<?> attributeMapping, Method attribute) {
@@ -113,7 +103,7 @@ public class AnnotationsPropertySource extends EnumerablePropertySource<Class<?>
 
 	private String toKebabCase(String name) {
 		Matcher matcher = CAMEL_CASE_PATTERN.matcher(name);
-		StringBuilder result = new StringBuilder();
+		StringBuffer result = new StringBuffer();
 		while (matcher.find()) {
 			matcher.appendReplacement(result, matcher.group(1) + '-' + StringUtils.uncapitalize(matcher.group(2)));
 		}
@@ -128,17 +118,11 @@ public class AnnotationsPropertySource extends EnumerablePropertySource<Class<?>
 		return postfix;
 	}
 
-	private void putProperties(String name, SkipPropertyMapping defaultSkip, Object value,
-			Map<String, Object> properties) {
+	private void putProperties(String name, Object value, Map<String, Object> properties) {
 		if (ObjectUtils.isArray(value)) {
 			Object[] array = ObjectUtils.toObjectArray(value);
 			for (int i = 0; i < array.length; i++) {
-				putProperties(name + "[" + i + "]", defaultSkip, array[i], properties);
-			}
-		}
-		else if (value instanceof MergedAnnotation<?> annotation) {
-			for (Method attribute : annotation.getType().getDeclaredMethods()) {
-				collectProperties(name, defaultSkip, (MergedAnnotation<?>) value, attribute, properties);
+				properties.put(name + "[" + i + "]", array[i]);
 			}
 		}
 		else {

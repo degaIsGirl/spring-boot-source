@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+
+	<bean id="binaryTea" class="org.springframework.boot.ioc.xml.BinaryTea" autowire="byType">
+	</bean>
+
+	<bean id="boss" class="org.springframework.boot.ioc.xml.Boss"></bean>
+
+	<bean id="customer" class="org.springframework.boot.ioc.xml.Customer"></bean>
+
+	<bean id="binaryTeaBeanProcess" class="org.springframework.boot.ioc.xml.BinaryTeaBeanProcess"></bean>
+
+	<!-- 指定包下(含子包)包含@Component注解的class将会被添加到ioc的容器中, @Service @Repository @Controller 都是@Component的派生注解 -->
+	<context:component-scan base-package="org.springframework.boot.ioc.xml.menu"></context:component-scan>
+
+	<!-- 导入外部的bean对象 -->
+	<import resource="classpath:/MyImportBeans.xml"></import>
+</beans>

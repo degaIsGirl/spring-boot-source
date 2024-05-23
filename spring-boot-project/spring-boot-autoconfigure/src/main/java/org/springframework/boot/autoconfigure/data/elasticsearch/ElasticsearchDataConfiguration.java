@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,27 +16,30 @@
 
 package org.springframework.boot.autoconfigure.data.elasticsearch;
 
-import java.util.Collections;
-
-import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import org.elasticsearch.action.support.IndicesOptions;
+import org.elasticsearch.action.support.WriteRequest;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.client.RestHighLevelClient;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.domain.EntityScanner;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.elasticsearch.annotations.Document;
-import org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate;
-import org.springframework.data.elasticsearch.client.elc.ReactiveElasticsearchClient;
-import org.springframework.data.elasticsearch.client.elc.ReactiveElasticsearchTemplate;
+import org.springframework.data.elasticsearch.client.reactive.ReactiveElasticsearchClient;
+import org.springframework.data.elasticsearch.core.DefaultEntityMapper;
+import org.springframework.data.elasticsearch.core.DefaultResultMapper;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
+import org.springframework.data.elasticsearch.core.ElasticsearchTemplate;
+import org.springframework.data.elasticsearch.core.EntityMapper;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.ReactiveElasticsearchTemplate;
+import org.springframework.data.elasticsearch.core.ResultsMapper;
 import org.springframework.data.elasticsearch.core.convert.ElasticsearchConverter;
-import org.springframework.data.elasticsearch.core.convert.ElasticsearchCustomConversions;
 import org.springframework.data.elasticsearch.core.convert.MappingElasticsearchConverter;
 import org.springframework.data.elasticsearch.core.mapping.SimpleElasticsearchMappingContext;
+import org.springframework.web.reactive.function.client.WebClient;
 
 /**
  * Configuration classes for Spring Data for Elasticsearch
@@ -45,8 +48,6 @@ import org.springframework.data.elasticsearch.core.mapping.SimpleElasticsearchMa
  * their order of execution.
  *
  * @author Brian Clozel
- * @author Scott Frederick
- * @author Stephane Nicoll
  */
 abstract class ElasticsearchDataConfiguration {
 
@@ -55,53 +56,77 @@ abstract class ElasticsearchDataConfiguration {
 
 		@Bean
 		@ConditionalOnMissingBean
-		ElasticsearchCustomConversions elasticsearchCustomConversions() {
-			return new ElasticsearchCustomConversions(Collections.emptyList());
+		ElasticsearchConverter elasticsearchConverter(SimpleElasticsearchMappingContext mappingContext) {
+			return new MappingElasticsearchConverter(mappingContext);
 		}
 
 		@Bean
 		@ConditionalOnMissingBean
-		SimpleElasticsearchMappingContext elasticsearchMappingContext(ApplicationContext applicationContext,
-				ElasticsearchCustomConversions elasticsearchCustomConversions) throws ClassNotFoundException {
-			SimpleElasticsearchMappingContext mappingContext = new SimpleElasticsearchMappingContext();
-			mappingContext.setInitialEntitySet(new EntityScanner(applicationContext).scan(Document.class));
-			mappingContext.setSimpleTypeHolder(elasticsearchCustomConversions.getSimpleTypeHolder());
-			return mappingContext;
+		SimpleElasticsearchMappingContext mappingContext() {
+			return new SimpleElasticsearchMappingContext();
 		}
 
 		@Bean
 		@ConditionalOnMissingBean
-		ElasticsearchConverter elasticsearchConverter(SimpleElasticsearchMappingContext mappingContext,
-				ElasticsearchCustomConversions elasticsearchCustomConversions) {
-			MappingElasticsearchConverter converter = new MappingElasticsearchConverter(mappingContext);
-			converter.setConversions(elasticsearchCustomConversions);
-			return converter;
+		EntityMapper entityMapper(SimpleElasticsearchMappingContext mappingContext) {
+			return new DefaultEntityMapper(mappingContext);
+		}
+
+		@Bean
+		@ConditionalOnMissingBean
+		ResultsMapper resultsMapper(SimpleElasticsearchMappingContext mappingContext, EntityMapper entityMapper) {
+			return new DefaultResultMapper(mappingContext, entityMapper);
 		}
 
 	}
 
 	@Configuration(proxyBeanMethods = false)
-	@ConditionalOnClass(ElasticsearchClient.class)
-	static class JavaClientConfiguration {
+	@ConditionalOnClass(RestHighLevelClient.class)
+	static class RestClientConfiguration {
 
 		@Bean
 		@ConditionalOnMissingBean(value = ElasticsearchOperations.class, name = "elasticsearchTemplate")
-		@ConditionalOnBean(ElasticsearchClient.class)
-		ElasticsearchTemplate elasticsearchTemplate(ElasticsearchClient client, ElasticsearchConverter converter) {
-			return new ElasticsearchTemplate(client, converter);
+		@ConditionalOnBean(RestHighLevelClient.class)
+		ElasticsearchRestTemplate elasticsearchTemplate(RestHighLevelClient client, ElasticsearchConverter converter,
+				ResultsMapper resultsMapper) {
+			return new ElasticsearchRestTemplate(client, converter, resultsMapper);
 		}
 
 	}
 
 	@Configuration(proxyBeanMethods = false)
+	@ConditionalOnClass(Client.class)
+	static class TransportClientConfiguration {
+
+		@Bean
+		@ConditionalOnMissingBean(value = ElasticsearchOperations.class, name = "elasticsearchTemplate")
+		@ConditionalOnBean(Client.class)
+		ElasticsearchTemplate elasticsearchTemplate(Client client, ElasticsearchConverter converter,
+				ResultsMapper resultsMapper) {
+			try {
+				return new ElasticsearchTemplate(client, converter, resultsMapper);
+			}
+			catch (Exception ex) {
+				throw new IllegalStateException(ex);
+			}
+		}
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	@ConditionalOnClass({ WebClient.class, ReactiveElasticsearchOperations.class })
 	static class ReactiveRestClientConfiguration {
 
 		@Bean
 		@ConditionalOnMissingBean(value = ReactiveElasticsearchOperations.class, name = "reactiveElasticsearchTemplate")
 		@ConditionalOnBean(ReactiveElasticsearchClient.class)
 		ReactiveElasticsearchTemplate reactiveElasticsearchTemplate(ReactiveElasticsearchClient client,
-				ElasticsearchConverter converter) {
-			return new ReactiveElasticsearchTemplate(client, converter);
+				ElasticsearchConverter converter, ResultsMapper resultsMapper) {
+			ReactiveElasticsearchTemplate template = new ReactiveElasticsearchTemplate(client, converter,
+					resultsMapper);
+			template.setIndicesOptions(IndicesOptions.strictExpandOpenAndForbidClosed());
+			template.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+			return template;
 		}
 
 	}

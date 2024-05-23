@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,10 +30,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author Marco Aust
  * @author Mark Paluch
  * @author Stephane Nicoll
- * @author Scott Frederick
  * @since 1.0.0
  */
-@ConfigurationProperties(prefix = "spring.data.redis")
+@ConfigurationProperties(prefix = "spring.redis")
 public class RedisProperties {
 
 	/**
@@ -42,7 +41,7 @@ public class RedisProperties {
 	private int database = 0;
 
 	/**
-	 * Connection URL. Overrides host, port, username, and password. Example:
+	 * Connection URL. Overrides host, port, and password. User is ignored. Example:
 	 * redis://user:password@example.com:6379
 	 */
 	private String url;
@@ -51,11 +50,6 @@ public class RedisProperties {
 	 * Redis server host.
 	 */
 	private String host = "localhost";
-
-	/**
-	 * Login username of the redis server.
-	 */
-	private String username;
 
 	/**
 	 * Login password of the redis server.
@@ -68,30 +62,23 @@ public class RedisProperties {
 	private int port = 6379;
 
 	/**
-	 * Read timeout.
+	 * Whether to enable SSL support.
 	 */
-	private Duration timeout;
+	private boolean ssl;
 
 	/**
 	 * Connection timeout.
 	 */
-	private Duration connectTimeout;
+	private Duration timeout;
 
 	/**
 	 * Client name to be set on connections with CLIENT SETNAME.
 	 */
 	private String clientName;
 
-	/**
-	 * Type of client to use. By default, auto-detected according to the classpath.
-	 */
-	private ClientType clientType;
-
 	private Sentinel sentinel;
 
 	private Cluster cluster;
-
-	private final Ssl ssl = new Ssl();
 
 	private final Jedis jedis = new Jedis();
 
@@ -121,14 +108,6 @@ public class RedisProperties {
 		this.host = host;
 	}
 
-	public String getUsername() {
-		return this.username;
-	}
-
-	public void setUsername(String username) {
-		this.username = username;
-	}
-
 	public String getPassword() {
 		return this.password;
 	}
@@ -145,8 +124,12 @@ public class RedisProperties {
 		this.port = port;
 	}
 
-	public Ssl getSsl() {
+	public boolean isSsl() {
 		return this.ssl;
+	}
+
+	public void setSsl(boolean ssl) {
+		this.ssl = ssl;
 	}
 
 	public void setTimeout(Duration timeout) {
@@ -157,28 +140,12 @@ public class RedisProperties {
 		return this.timeout;
 	}
 
-	public Duration getConnectTimeout() {
-		return this.connectTimeout;
-	}
-
-	public void setConnectTimeout(Duration connectTimeout) {
-		this.connectTimeout = connectTimeout;
-	}
-
 	public String getClientName() {
 		return this.clientName;
 	}
 
 	public void setClientName(String clientName) {
 		this.clientName = clientName;
-	}
-
-	public ClientType getClientType() {
-		return this.clientType;
-	}
-
-	public void setClientType(ClientType clientType) {
-		this.clientType = clientType;
 	}
 
 	public Sentinel getSentinel() {
@@ -206,33 +173,9 @@ public class RedisProperties {
 	}
 
 	/**
-	 * Type of Redis client to use.
-	 */
-	public enum ClientType {
-
-		/**
-		 * Use the Lettuce redis client.
-		 */
-		LETTUCE,
-
-		/**
-		 * Use the Jedis redis client.
-		 */
-		JEDIS
-
-	}
-
-	/**
 	 * Pool properties.
 	 */
 	public static class Pool {
-
-		/**
-		 * Whether to enable the pool. Enabled automatically if "commons-pool2" is
-		 * available. With Jedis, pooling is implicitly enabled in sentinel mode and this
-		 * setting only applies to single node setup.
-		 */
-		private Boolean enabled;
 
 		/**
 		 * Maximum number of "idle" connections in the pool. Use a negative value to
@@ -265,14 +208,6 @@ public class RedisProperties {
 		 * object evictor thread starts, otherwise no idle object eviction is performed.
 		 */
 		private Duration timeBetweenEvictionRuns;
-
-		public Boolean getEnabled() {
-			return this.enabled;
-		}
-
-		public void setEnabled(Boolean enabled) {
-			this.enabled = enabled;
-		}
 
 		public int getMaxIdle() {
 			return this.maxIdle;
@@ -366,16 +301,6 @@ public class RedisProperties {
 		 */
 		private List<String> nodes;
 
-		/**
-		 * Login username for authenticating with sentinel(s).
-		 */
-		private String username;
-
-		/**
-		 * Password for authenticating with sentinel(s).
-		 */
-		private String password;
-
 		public String getMaster() {
 			return this.master;
 		}
@@ -392,53 +317,6 @@ public class RedisProperties {
 			this.nodes = nodes;
 		}
 
-		public String getUsername() {
-			return this.username;
-		}
-
-		public void setUsername(String username) {
-			this.username = username;
-		}
-
-		public String getPassword() {
-			return this.password;
-		}
-
-		public void setPassword(String password) {
-			this.password = password;
-		}
-
-	}
-
-	public static class Ssl {
-
-		/**
-		 * Whether to enable SSL support. Enabled automatically if "bundle" is provided
-		 * unless specified otherwise.
-		 */
-		private Boolean enabled;
-
-		/**
-		 * SSL bundle name.
-		 */
-		private String bundle;
-
-		public boolean isEnabled() {
-			return (this.enabled != null) ? this.enabled : this.bundle != null;
-		}
-
-		public void setEnabled(boolean enabled) {
-			this.enabled = enabled;
-		}
-
-		public String getBundle() {
-			return this.bundle;
-		}
-
-		public void setBundle(String bundle) {
-			this.bundle = bundle;
-		}
-
 	}
 
 	/**
@@ -449,10 +327,14 @@ public class RedisProperties {
 		/**
 		 * Jedis pool configuration.
 		 */
-		private final Pool pool = new Pool();
+		private Pool pool;
 
 		public Pool getPool() {
 			return this.pool;
+		}
+
+		public void setPool(Pool pool) {
+			this.pool = pool;
 		}
 
 	}
@@ -470,9 +352,7 @@ public class RedisProperties {
 		/**
 		 * Lettuce pool configuration.
 		 */
-		private final Pool pool = new Pool();
-
-		private final Cluster cluster = new Cluster();
+		private Pool pool;
 
 		public Duration getShutdownTimeout() {
 			return this.shutdownTimeout;
@@ -486,64 +366,8 @@ public class RedisProperties {
 			return this.pool;
 		}
 
-		public Cluster getCluster() {
-			return this.cluster;
-		}
-
-		public static class Cluster {
-
-			private final Refresh refresh = new Refresh();
-
-			public Refresh getRefresh() {
-				return this.refresh;
-			}
-
-			public static class Refresh {
-
-				/**
-				 * Whether to discover and query all cluster nodes for obtaining the
-				 * cluster topology. When set to false, only the initial seed nodes are
-				 * used as sources for topology discovery.
-				 */
-				private boolean dynamicRefreshSources = true;
-
-				/**
-				 * Cluster topology refresh period.
-				 */
-				private Duration period;
-
-				/**
-				 * Whether adaptive topology refreshing using all available refresh
-				 * triggers should be used.
-				 */
-				private boolean adaptive;
-
-				public boolean isDynamicRefreshSources() {
-					return this.dynamicRefreshSources;
-				}
-
-				public void setDynamicRefreshSources(boolean dynamicRefreshSources) {
-					this.dynamicRefreshSources = dynamicRefreshSources;
-				}
-
-				public Duration getPeriod() {
-					return this.period;
-				}
-
-				public void setPeriod(Duration period) {
-					this.period = period;
-				}
-
-				public boolean isAdaptive() {
-					return this.adaptive;
-				}
-
-				public void setAdaptive(boolean adaptive) {
-					this.adaptive = adaptive;
-				}
-
-			}
-
+		public void setPool(Pool pool) {
+			this.pool = pool;
 		}
 
 	}

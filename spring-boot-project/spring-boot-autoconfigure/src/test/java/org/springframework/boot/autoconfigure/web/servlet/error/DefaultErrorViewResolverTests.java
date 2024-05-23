@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,16 +20,16 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
 import org.springframework.boot.autoconfigure.template.TemplateAvailabilityProvider;
 import org.springframework.boot.autoconfigure.template.TemplateAvailabilityProviders;
-import org.springframework.boot.autoconfigure.web.WebProperties.Resources;
+import org.springframework.boot.autoconfigure.web.ResourceProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.Ordered;
@@ -46,8 +46,9 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 /**
  * Tests for {@link DefaultErrorViewResolver}.
@@ -55,7 +56,6 @@ import static org.mockito.Mockito.mock;
  * @author Phillip Webb
  * @author Andy Wilkinson
  */
-@ExtendWith(MockitoExtension.class)
 class DefaultErrorViewResolverTests {
 
 	private DefaultErrorViewResolver resolver;
@@ -63,34 +63,36 @@ class DefaultErrorViewResolverTests {
 	@Mock
 	private TemplateAvailabilityProvider templateAvailabilityProvider;
 
-	private Resources resourcesProperties;
+	private ResourceProperties resourceProperties;
 
-	private final Map<String, Object> model = new HashMap<>();
+	private Map<String, Object> model = new HashMap<>();
 
-	private final HttpServletRequest request = new MockHttpServletRequest();
+	private HttpServletRequest request = new MockHttpServletRequest();
 
 	@BeforeEach
 	void setup() {
+		MockitoAnnotations.initMocks(this);
 		AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext();
 		applicationContext.refresh();
-		this.resourcesProperties = new Resources();
+		this.resourceProperties = new ResourceProperties();
 		TemplateAvailabilityProviders templateAvailabilityProviders = new TestTemplateAvailabilityProviders(
 				this.templateAvailabilityProvider);
-		this.resolver = new DefaultErrorViewResolver(applicationContext, this.resourcesProperties,
+		this.resolver = new DefaultErrorViewResolver(applicationContext, this.resourceProperties,
 				templateAvailabilityProviders);
 	}
 
 	@Test
 	void createWhenApplicationContextIsNullShouldThrowException() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new DefaultErrorViewResolver(null, new Resources()))
-			.withMessageContaining("ApplicationContext must not be null");
+		assertThatIllegalArgumentException()
+				.isThrownBy(() -> new DefaultErrorViewResolver(null, new ResourceProperties()))
+				.withMessageContaining("ApplicationContext must not be null");
 	}
 
 	@Test
 	void createWhenResourcePropertiesIsNullShouldThrowException() {
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new DefaultErrorViewResolver(mock(ApplicationContext.class), (Resources) null))
-			.withMessageContaining("Resources must not be null");
+				.isThrownBy(() -> new DefaultErrorViewResolver(mock(ApplicationContext.class), null))
+				.withMessageContaining("ResourceProperties must not be null");
 	}
 
 	@Test
@@ -102,25 +104,19 @@ class DefaultErrorViewResolverTests {
 	@Test
 	void resolveWhenExactTemplateMatchShouldReturnTemplate() {
 		given(this.templateAvailabilityProvider.isTemplateAvailable(eq("error/404"), any(Environment.class),
-				any(ClassLoader.class), any(ResourceLoader.class)))
-			.willReturn(true);
+				any(ClassLoader.class), any(ResourceLoader.class))).willReturn(true);
 		ModelAndView resolved = this.resolver.resolveErrorView(this.request, HttpStatus.NOT_FOUND, this.model);
 		assertThat(resolved).isNotNull();
 		assertThat(resolved.getViewName()).isEqualTo("error/404");
-		then(this.templateAvailabilityProvider).should()
-			.isTemplateAvailable(eq("error/404"), any(Environment.class), any(ClassLoader.class),
-					any(ResourceLoader.class));
-		then(this.templateAvailabilityProvider).shouldHaveNoMoreInteractions();
+		verify(this.templateAvailabilityProvider).isTemplateAvailable(eq("error/404"), any(Environment.class),
+				any(ClassLoader.class), any(ResourceLoader.class));
+		verifyNoMoreInteractions(this.templateAvailabilityProvider);
 	}
 
 	@Test
 	void resolveWhenSeries5xxTemplateMatchShouldReturnTemplate() {
-		given(this.templateAvailabilityProvider.isTemplateAvailable(eq("error/503"), any(Environment.class),
-				any(ClassLoader.class), any(ResourceLoader.class)))
-			.willReturn(false);
 		given(this.templateAvailabilityProvider.isTemplateAvailable(eq("error/5xx"), any(Environment.class),
-				any(ClassLoader.class), any(ResourceLoader.class)))
-			.willReturn(true);
+				any(ClassLoader.class), any(ResourceLoader.class))).willReturn(true);
 		ModelAndView resolved = this.resolver.resolveErrorView(this.request, HttpStatus.SERVICE_UNAVAILABLE,
 				this.model);
 		assertThat(resolved.getViewName()).isEqualTo("error/5xx");
@@ -128,12 +124,8 @@ class DefaultErrorViewResolverTests {
 
 	@Test
 	void resolveWhenSeries4xxTemplateMatchShouldReturnTemplate() {
-		given(this.templateAvailabilityProvider.isTemplateAvailable(eq("error/404"), any(Environment.class),
-				any(ClassLoader.class), any(ResourceLoader.class)))
-			.willReturn(false);
 		given(this.templateAvailabilityProvider.isTemplateAvailable(eq("error/4xx"), any(Environment.class),
-				any(ClassLoader.class), any(ResourceLoader.class)))
-			.willReturn(true);
+				any(ClassLoader.class), any(ResourceLoader.class))).willReturn(true);
 		ModelAndView resolved = this.resolver.resolveErrorView(this.request, HttpStatus.NOT_FOUND, this.model);
 		assertThat(resolved.getViewName()).isEqualTo("error/4xx");
 	}
@@ -170,8 +162,7 @@ class DefaultErrorViewResolverTests {
 	void resolveWhenTemplateAndResourceMatchShouldFavorTemplate() {
 		setResourceLocation("/exact");
 		given(this.templateAvailabilityProvider.isTemplateAvailable(eq("error/404"), any(Environment.class),
-				any(ClassLoader.class), any(ResourceLoader.class)))
-			.willReturn(true);
+				any(ClassLoader.class), any(ResourceLoader.class))).willReturn(true);
 		ModelAndView resolved = this.resolver.resolveErrorView(this.request, HttpStatus.NOT_FOUND, this.model);
 		assertThat(resolved.getViewName()).isEqualTo("error/404");
 	}
@@ -179,11 +170,9 @@ class DefaultErrorViewResolverTests {
 	@Test
 	void resolveWhenExactResourceMatchAndSeriesTemplateMatchShouldFavorResource() throws Exception {
 		setResourceLocation("/exact");
-		given(this.templateAvailabilityProvider.isTemplateAvailable(eq("error/404"), any(Environment.class),
-				any(ClassLoader.class), any(ResourceLoader.class)))
-			.willReturn(false);
+		given(this.templateAvailabilityProvider.isTemplateAvailable(eq("error/4xx"), any(Environment.class),
+				any(ClassLoader.class), any(ResourceLoader.class))).willReturn(true);
 		ModelAndView resolved = this.resolver.resolveErrorView(this.request, HttpStatus.NOT_FOUND, this.model);
-		then(this.templateAvailabilityProvider).shouldHaveNoMoreInteractions();
 		MockHttpServletResponse response = render(resolved);
 		assertThat(response.getContentAsString().trim()).isEqualTo("exact/404");
 		assertThat(response.getContentType()).isEqualTo(MediaType.TEXT_HTML_VALUE);
@@ -202,8 +191,8 @@ class DefaultErrorViewResolverTests {
 
 	private void setResourceLocation(String path) {
 		String packageName = getClass().getPackage().getName();
-		this.resourcesProperties
-			.setStaticLocations(new String[] { "classpath:" + packageName.replace('.', '/') + path + "/" });
+		this.resourceProperties
+				.setStaticLocations(new String[] { "classpath:" + packageName.replace('.', '/') + path + "/" });
 	}
 
 	private MockHttpServletResponse render(ModelAndView modelAndView) throws Exception {

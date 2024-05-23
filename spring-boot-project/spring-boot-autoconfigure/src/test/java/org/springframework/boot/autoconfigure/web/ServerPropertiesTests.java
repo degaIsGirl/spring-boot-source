@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,20 @@
 
 package org.springframework.boot.autoconfigure.web;
 
+import java.io.IOException;
 import java.net.InetAddress;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.UndertowOptions;
 import org.apache.catalina.connector.Connector;
@@ -30,26 +38,31 @@ import org.apache.catalina.core.StandardEngine;
 import org.apache.catalina.valves.AccessLogValve;
 import org.apache.catalina.valves.RemoteIpValve;
 import org.apache.coyote.AbstractProtocol;
-import org.apache.tomcat.util.net.AbstractEndpoint;
-import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
+import org.eclipse.jetty.server.HttpChannel;
+import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.util.thread.QueuedThreadPool;
+import org.eclipse.jetty.util.thread.ThreadPool;
 import org.junit.jupiter.api.Test;
-import reactor.netty.http.HttpDecoderSpec;
 
 import org.springframework.boot.autoconfigure.web.ServerProperties.Tomcat.Accesslog;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.ConfigurationPropertySource;
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
-import org.springframework.boot.testsupport.web.servlet.DirtiesUrlFactories;
 import org.springframework.boot.web.embedded.jetty.JettyServletWebServerFactory;
 import org.springframework.boot.web.embedded.jetty.JettyWebServer;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
-import org.springframework.boot.web.server.MimeMappings;
-import org.springframework.boot.web.server.MimeMappings.Mapping;
+import org.springframework.boot.web.servlet.ServletContextInitializer;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.util.unit.DataSize;
+import org.springframework.web.client.ResponseErrorHandler;
+import org.springframework.web.client.RestTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -66,11 +79,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Andrew McGhie
  * @author HaiTao Zhang
  * @author Rafiullah Hamedy
- * @author Chris Bono
- * @author Parviz Rozikov
- * @author Lasse Wulff
  */
-@DirtiesUrlFactories
 class ServerPropertiesTests {
 
 	private final ServerProperties properties = new ServerProperties();
@@ -99,7 +108,12 @@ class ServerPropertiesTests {
 	}
 
 	@Test
-	@SuppressWarnings("removal")
+	void testConnectionTimeout() {
+		bind("server.connection-timeout", "60s");
+		assertThat(this.properties.getConnectionTimeout()).isEqualTo(Duration.ofMillis(60000));
+	}
+
+	@Test
 	void testTomcatBinding() {
 		Map<String, String> map = new HashMap<>();
 		map.put("server.tomcat.accesslog.conditionIf", "foo");
@@ -114,11 +128,9 @@ class ServerPropertiesTests {
 		map.put("server.tomcat.accesslog.rename-on-rotate", "true");
 		map.put("server.tomcat.accesslog.ipv6Canonical", "true");
 		map.put("server.tomcat.accesslog.request-attributes-enabled", "true");
-		map.put("server.tomcat.remoteip.protocol-header", "X-Forwarded-Protocol");
-		map.put("server.tomcat.remoteip.remote-ip-header", "Remote-Ip");
-		map.put("server.tomcat.remoteip.internal-proxies", "10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}");
-		map.put("server.tomcat.remoteip.trusted-proxies", "proxy1|proxy2|proxy3");
-		map.put("server.tomcat.reject-illegal-header", "false");
+		map.put("server.tomcat.protocol-header", "X-Forwarded-Protocol");
+		map.put("server.tomcat.remote-ip-header", "Remote-Ip");
+		map.put("server.tomcat.internal-proxies", "10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}");
 		map.put("server.tomcat.background-processor-delay", "10");
 		map.put("server.tomcat.relaxed-path-chars", "|,<");
 		map.put("server.tomcat.relaxed-query-chars", "^  ,  | ");
@@ -133,20 +145,18 @@ class ServerPropertiesTests {
 		assertThat(accesslog.getSuffix()).isEqualTo("-bar.log");
 		assertThat(accesslog.getEncoding()).isEqualTo("UTF-8");
 		assertThat(accesslog.getLocale()).isEqualTo("en-AU");
-		assertThat(accesslog.isCheckExists()).isTrue();
+		assertThat(accesslog.isCheckExists()).isEqualTo(true);
 		assertThat(accesslog.isRotate()).isFalse();
 		assertThat(accesslog.isRenameOnRotate()).isTrue();
 		assertThat(accesslog.isIpv6Canonical()).isTrue();
 		assertThat(accesslog.isRequestAttributesEnabled()).isTrue();
-		assertThat(tomcat.getRemoteip().getRemoteIpHeader()).isEqualTo("Remote-Ip");
-		assertThat(tomcat.getRemoteip().getProtocolHeader()).isEqualTo("X-Forwarded-Protocol");
-		assertThat(tomcat.getRemoteip().getInternalProxies()).isEqualTo("10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}");
-		assertThat(tomcat.getRemoteip().getTrustedProxies()).isEqualTo("proxy1|proxy2|proxy3");
-		assertThat(tomcat.isRejectIllegalHeader()).isFalse();
-		assertThat(tomcat.getBackgroundProcessorDelay()).hasSeconds(10);
+		assertThat(tomcat.getRemoteIpHeader()).isEqualTo("Remote-Ip");
+		assertThat(tomcat.getProtocolHeader()).isEqualTo("X-Forwarded-Protocol");
+		assertThat(tomcat.getInternalProxies()).isEqualTo("10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}");
+		assertThat(tomcat.getBackgroundProcessorDelay()).isEqualTo(Duration.ofSeconds(10));
 		assertThat(tomcat.getRelaxedPathChars()).containsExactly('|', '<');
 		assertThat(tomcat.getRelaxedQueryChars()).containsExactly('^', '|');
-		assertThat(tomcat.isUseRelativeRedirects()).isTrue();
+		assertThat(tomcat.getUseRelativeRedirects()).isTrue();
 	}
 
 	@Test
@@ -158,7 +168,7 @@ class ServerPropertiesTests {
 	@Test
 	void testSlashOfContextPathIsDefaultValue() {
 		bind("server.servlet.context-path", "/");
-		assertThat(this.properties.getServlet().getContextPath()).isEmpty();
+		assertThat(this.properties.getServlet().getContextPath()).isEqualTo("");
 	}
 
 	@Test
@@ -186,108 +196,51 @@ class ServerPropertiesTests {
 	}
 
 	@Test
-	void testDefaultMimeMapping() {
-		assertThat(this.properties.getMimeMappings())
-			.containsExactly(MimeMappings.DEFAULT.getAll().toArray(new Mapping[0]));
-	}
-
-	@Test
-	void testCustomizedMimeMapping() {
-		MimeMappings expectedMappings = MimeMappings.lazyCopy(MimeMappings.DEFAULT);
-		expectedMappings.add("mjs", "text/javascript");
-		bind("server.mime-mappings.mjs", "text/javascript");
-		assertThat(this.properties.getMimeMappings())
-			.containsExactly(expectedMappings.getAll().toArray(new Mapping[0]));
-	}
-
-	@Test
 	void testCustomizeUriEncoding() {
 		bind("server.tomcat.uri-encoding", "US-ASCII");
 		assertThat(this.properties.getTomcat().getUriEncoding()).isEqualTo(StandardCharsets.US_ASCII);
 	}
 
 	@Test
-	void testCustomizeMaxHttpRequestHeaderSize() {
-		bind("server.max-http-request-header-size", "1MB");
-		assertThat(this.properties.getMaxHttpRequestHeaderSize()).isEqualTo(DataSize.ofMegabytes(1));
+	void testCustomizeHeaderSize() {
+		bind("server.max-http-header-size", "1MB");
+		assertThat(this.properties.getMaxHttpHeaderSize()).isEqualTo(DataSize.ofMegabytes(1));
 	}
 
 	@Test
-	void testCustomizeMaxHttpRequestHeaderSizeUseBytesByDefault() {
-		bind("server.max-http-request-header-size", "1024");
-		assertThat(this.properties.getMaxHttpRequestHeaderSize()).isEqualTo(DataSize.ofKilobytes(1));
-	}
-
-	@Test
-	void testCustomizeTomcatMaxThreads() {
-		bind("server.tomcat.threads.max", "10");
-		assertThat(this.properties.getTomcat().getThreads().getMax()).isEqualTo(10);
-	}
-
-	@Test
-	void testCustomizeTomcatKeepAliveTimeout() {
-		bind("server.tomcat.keep-alive-timeout", "30s");
-		assertThat(this.properties.getTomcat().getKeepAliveTimeout()).hasSeconds(30);
-	}
-
-	@Test
-	void testCustomizeTomcatKeepAliveTimeoutWithInfinite() {
-		bind("server.tomcat.keep-alive-timeout", "-1");
-		assertThat(this.properties.getTomcat().getKeepAliveTimeout()).hasMillis(-1);
-	}
-
-	@Test
-	void customizeMaxKeepAliveRequests() {
-		bind("server.tomcat.max-keep-alive-requests", "200");
-		assertThat(this.properties.getTomcat().getMaxKeepAliveRequests()).isEqualTo(200);
-	}
-
-	@Test
-	void customizeMaxKeepAliveRequestsWithInfinite() {
-		bind("server.tomcat.max-keep-alive-requests", "-1");
-		assertThat(this.properties.getTomcat().getMaxKeepAliveRequests()).isEqualTo(-1);
-	}
-
-	@Test
-	void testCustomizeTomcatMinSpareThreads() {
-		bind("server.tomcat.threads.min-spare", "10");
-		assertThat(this.properties.getTomcat().getThreads().getMinSpare()).isEqualTo(10);
+	void testCustomizeHeaderSizeUseBytesByDefault() {
+		bind("server.max-http-header-size", "1024");
+		assertThat(this.properties.getMaxHttpHeaderSize()).isEqualTo(DataSize.ofKilobytes(1));
 	}
 
 	@Test
 	void testCustomizeJettyAcceptors() {
-		bind("server.jetty.threads.acceptors", "10");
-		assertThat(this.properties.getJetty().getThreads().getAcceptors()).isEqualTo(10);
+		bind("server.jetty.acceptors", "10");
+		assertThat(this.properties.getJetty().getAcceptors()).isEqualTo(10);
 	}
 
 	@Test
 	void testCustomizeJettySelectors() {
-		bind("server.jetty.threads.selectors", "10");
-		assertThat(this.properties.getJetty().getThreads().getSelectors()).isEqualTo(10);
+		bind("server.jetty.selectors", "10");
+		assertThat(this.properties.getJetty().getSelectors()).isEqualTo(10);
 	}
 
 	@Test
 	void testCustomizeJettyMaxThreads() {
-		bind("server.jetty.threads.max", "10");
-		assertThat(this.properties.getJetty().getThreads().getMax()).isEqualTo(10);
+		bind("server.jetty.max-threads", "10");
+		assertThat(this.properties.getJetty().getMaxThreads()).isEqualTo(10);
 	}
 
 	@Test
 	void testCustomizeJettyMinThreads() {
-		bind("server.jetty.threads.min", "10");
-		assertThat(this.properties.getJetty().getThreads().getMin()).isEqualTo(10);
+		bind("server.jetty.min-threads", "10");
+		assertThat(this.properties.getJetty().getMinThreads()).isEqualTo(10);
 	}
 
 	@Test
 	void testCustomizeJettyIdleTimeout() {
-		bind("server.jetty.threads.idle-timeout", "10s");
-		assertThat(this.properties.getJetty().getThreads().getIdleTimeout()).isEqualTo(Duration.ofSeconds(10));
-	}
-
-	@Test
-	void testCustomizeJettyMaxQueueCapacity() {
-		bind("server.jetty.threads.max-queue-capacity", "5150");
-		assertThat(this.properties.getJetty().getThreads().getMaxQueueCapacity()).isEqualTo(5150);
+		bind("server.jetty.thread-idle-timeout", "10s");
+		assertThat(this.properties.getJetty().getThreadIdleTimeout()).isEqualTo(Duration.ofSeconds(10));
 	}
 
 	@Test
@@ -302,18 +255,6 @@ class ServerPropertiesTests {
 		bind("server.undertow.options.socket.ALWAYS_SET_KEEP_ALIVE", "true");
 		assertThat(this.properties.getUndertow().getOptions().getSocket()).containsEntry("ALWAYS_SET_KEEP_ALIVE",
 				"true");
-	}
-
-	@Test
-	void testCustomizeUndertowIoThreads() {
-		bind("server.undertow.threads.io", "4");
-		assertThat(this.properties.getUndertow().getThreads().getIo()).isEqualTo(4);
-	}
-
-	@Test
-	void testCustomizeUndertowWorkerThreads() {
-		bind("server.undertow.threads.worker", "10");
-		assertThat(this.properties.getUndertow().getThreads().getWorker()).isEqualTo(10);
 	}
 
 	@Test
@@ -338,18 +279,6 @@ class ServerPropertiesTests {
 	}
 
 	@Test
-	void testCustomizeNettyIdleTimeout() {
-		bind("server.netty.idle-timeout", "10s");
-		assertThat(this.properties.getNetty().getIdleTimeout()).isEqualTo(Duration.ofSeconds(10));
-	}
-
-	@Test
-	void testCustomizeNettyMaxKeepAliveRequests() {
-		bind("server.netty.max-keep-alive-requests", "100");
-		assertThat(this.properties.getNetty().getMaxKeepAliveRequests()).isEqualTo(100);
-	}
-
-	@Test
 	void tomcatAcceptCountMatchesProtocolDefault() throws Exception {
 		assertThat(this.properties.getTomcat().getAcceptCount()).isEqualTo(getDefaultProtocol().getAcceptCount());
 	}
@@ -366,142 +295,154 @@ class ServerPropertiesTests {
 
 	@Test
 	void tomcatMaxThreadsMatchesProtocolDefault() throws Exception {
-		assertThat(this.properties.getTomcat().getThreads().getMax()).isEqualTo(getDefaultProtocol().getMaxThreads());
+		assertThat(this.properties.getTomcat().getMaxThreads()).isEqualTo(getDefaultProtocol().getMaxThreads());
 	}
 
 	@Test
 	void tomcatMinSpareThreadsMatchesProtocolDefault() throws Exception {
-		assertThat(this.properties.getTomcat().getThreads().getMinSpare())
-			.isEqualTo(getDefaultProtocol().getMinSpareThreads());
+		assertThat(this.properties.getTomcat().getMinSpareThreads())
+				.isEqualTo(getDefaultProtocol().getMinSpareThreads());
 	}
 
 	@Test
-	void tomcatMaxHttpPostSizeMatchesConnectorDefault() {
-		assertThat(this.properties.getTomcat().getMaxHttpFormPostSize().toBytes())
-			.isEqualTo(getDefaultConnector().getMaxPostSize());
+	void tomcatMaxHttpPostSizeMatchesConnectorDefault() throws Exception {
+		assertThat(this.properties.getTomcat().getMaxHttpPostSize().toBytes())
+				.isEqualTo(getDefaultConnector().getMaxPostSize());
 	}
 
 	@Test
 	void tomcatBackgroundProcessorDelayMatchesEngineDefault() {
 		assertThat(this.properties.getTomcat().getBackgroundProcessorDelay())
-			.hasSeconds((new StandardEngine().getBackgroundProcessorDelay()));
+				.isEqualTo(Duration.ofSeconds((new StandardEngine().getBackgroundProcessorDelay())));
 	}
 
 	@Test
-	void tomcatMaxHttpFormPostSizeMatchesConnectorDefault() {
+	void tomcatMaxHttpFormPostSizeMatchesConnectorDefault() throws Exception {
 		assertThat(this.properties.getTomcat().getMaxHttpFormPostSize().toBytes())
-			.isEqualTo(getDefaultConnector().getMaxPostSize());
+				.isEqualTo(getDefaultConnector().getMaxPostSize());
 	}
 
 	@Test
-	void tomcatUriEncodingMatchesConnectorDefault() {
+	void tomcatUriEncodingMatchesConnectorDefault() throws Exception {
 		assertThat(this.properties.getTomcat().getUriEncoding().name())
-			.isEqualTo(getDefaultConnector().getURIEncoding());
+				.isEqualTo(getDefaultConnector().getURIEncoding());
 	}
 
 	@Test
 	void tomcatRedirectContextRootMatchesDefault() {
 		assertThat(this.properties.getTomcat().getRedirectContextRoot())
-			.isEqualTo(new StandardContext().getMapperContextRootRedirectEnabled());
+				.isEqualTo(new StandardContext().getMapperContextRootRedirectEnabled());
 	}
 
 	@Test
 	void tomcatAccessLogRenameOnRotateMatchesDefault() {
 		assertThat(this.properties.getTomcat().getAccesslog().isRenameOnRotate())
-			.isEqualTo(new AccessLogValve().isRenameOnRotate());
+				.isEqualTo(new AccessLogValve().isRenameOnRotate());
 	}
 
 	@Test
 	void tomcatAccessLogRequestAttributesEnabledMatchesDefault() {
 		assertThat(this.properties.getTomcat().getAccesslog().isRequestAttributesEnabled())
-			.isEqualTo(new AccessLogValve().getRequestAttributesEnabled());
+				.isEqualTo(new AccessLogValve().getRequestAttributesEnabled());
 	}
 
 	@Test
 	void tomcatInternalProxiesMatchesDefault() {
-		assertThat(this.properties.getTomcat().getRemoteip().getInternalProxies())
-			.isEqualTo(new RemoteIpValve().getInternalProxies());
-	}
-
-	@Test
-	@SuppressWarnings("removal")
-	void tomcatRejectIllegalHeaderMatchesProtocolDefault() throws Exception {
-		assertThat(getDefaultProtocol()).hasFieldOrPropertyWithValue("rejectIllegalHeader",
-				this.properties.getTomcat().isRejectIllegalHeader());
+		assertThat(this.properties.getTomcat().getInternalProxies())
+				.isEqualTo(new RemoteIpValve().getInternalProxies());
 	}
 
 	@Test
 	void tomcatUseRelativeRedirectsDefaultsToFalse() {
-		assertThat(this.properties.getTomcat().isUseRelativeRedirects()).isFalse();
-	}
-
-	@Test
-	void tomcatMaxKeepAliveRequestsDefault() throws Exception {
-		AbstractEndpoint<?, ?> endpoint = (AbstractEndpoint<?, ?>) ReflectionTestUtils.getField(getDefaultProtocol(),
-				"endpoint");
-		int defaultMaxKeepAliveRequests = (int) ReflectionTestUtils.getField(endpoint, "maxKeepAliveRequests");
-		assertThat(this.properties.getTomcat().getMaxKeepAliveRequests()).isEqualTo(defaultMaxKeepAliveRequests);
+		assertThat(this.properties.getTomcat().getUseRelativeRedirects()).isFalse();
 	}
 
 	@Test
 	void jettyThreadPoolPropertyDefaultsShouldMatchServerDefault() {
 		JettyServletWebServerFactory jettyFactory = new JettyServletWebServerFactory(0);
 		JettyWebServer jetty = (JettyWebServer) jettyFactory.getWebServer();
-		Server server = jetty.getServer();
-		QueuedThreadPool threadPool = (QueuedThreadPool) server.getThreadPool();
-		int idleTimeout = threadPool.getIdleTimeout();
-		int maxThreads = threadPool.getMaxThreads();
-		int minThreads = threadPool.getMinThreads();
-		assertThat(this.properties.getJetty().getThreads().getIdleTimeout().toMillis()).isEqualTo(idleTimeout);
-		assertThat(this.properties.getJetty().getThreads().getMax()).isEqualTo(maxThreads);
-		assertThat(this.properties.getJetty().getThreads().getMin()).isEqualTo(minThreads);
+		Server server = (Server) ReflectionTestUtils.getField(jetty, "server");
+		ThreadPool threadPool = (ThreadPool) ReflectionTestUtils.getField(server, "_threadPool");
+		int idleTimeout = (int) ReflectionTestUtils.getField(threadPool, "_idleTimeout");
+		int maxThreads = (int) ReflectionTestUtils.getField(threadPool, "_maxThreads");
+		int minThreads = (int) ReflectionTestUtils.getField(threadPool, "_minThreads");
+		assertThat(this.properties.getJetty().getThreadIdleTimeout().toMillis()).isEqualTo(idleTimeout);
+		assertThat(this.properties.getJetty().getMaxThreads()).isEqualTo(maxThreads);
+		assertThat(this.properties.getJetty().getMinThreads()).isEqualTo(minThreads);
 	}
 
 	@Test
-	void jettyMaxHttpFormPostSizeMatchesDefault() {
+	void jettyMaxHttpFormPostSizeMatchesDefault() throws Exception {
 		JettyServletWebServerFactory jettyFactory = new JettyServletWebServerFactory(0);
-		JettyWebServer jetty = (JettyWebServer) jettyFactory.getWebServer();
-		Server server = jetty.getServer();
-		assertThat(this.properties.getJetty().getMaxHttpFormPostSize().toBytes())
-			.isEqualTo(((ServletContextHandler) server.getHandler()).getMaxFormContentSize());
+		JettyWebServer jetty = (JettyWebServer) jettyFactory
+				.getWebServer((ServletContextInitializer) (servletContext) -> servletContext
+						.addServlet("formPost", new HttpServlet() {
+
+							@Override
+							protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+									throws ServletException, IOException {
+								req.getParameterMap();
+							}
+
+						}).addMapping("/form"));
+		jetty.start();
+		org.eclipse.jetty.server.Connector connector = jetty.getServer().getConnectors()[0];
+		final AtomicReference<Throwable> failure = new AtomicReference<>();
+		connector.addBean(new HttpChannel.Listener() {
+
+			@Override
+			public void onDispatchFailure(Request request, Throwable ex) {
+				failure.set(ex);
+			}
+
+		});
+		try {
+			RestTemplate template = new RestTemplate();
+			template.setErrorHandler(new ResponseErrorHandler() {
+
+				@Override
+				public boolean hasError(ClientHttpResponse response) throws IOException {
+					return false;
+				}
+
+				@Override
+				public void handleError(ClientHttpResponse response) throws IOException {
+
+				}
+
+			});
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+			MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+			StringBuilder data = new StringBuilder();
+			for (int i = 0; i < 250000; i++) {
+				data.append("a");
+			}
+			body.add("data", data.toString());
+			HttpEntity<MultiValueMap<String, Object>> entity = new HttpEntity<>(body, headers);
+			template.postForEntity(URI.create("http://localhost:" + jetty.getPort() + "/form"), entity, Void.class);
+			assertThat(failure.get()).isNotNull();
+			String message = failure.get().getCause().getMessage();
+			int defaultMaxPostSize = Integer.valueOf(message.substring(message.lastIndexOf(' ')).trim());
+			assertThat(this.properties.getJetty().getMaxHttpFormPostSize().toBytes()).isEqualTo(defaultMaxPostSize);
+		}
+		finally {
+			jetty.stop();
+		}
 	}
 
 	@Test
 	void undertowMaxHttpPostSizeMatchesDefault() {
 		assertThat(this.properties.getUndertow().getMaxHttpPostSize().toBytes())
-			.isEqualTo(UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
+				.isEqualTo(UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
 	}
 
-	@Test
-	void nettyMaxInitialLineLengthMatchesHttpDecoderSpecDefault() {
-		assertThat(this.properties.getNetty().getMaxInitialLineLength().toBytes())
-			.isEqualTo(HttpDecoderSpec.DEFAULT_MAX_INITIAL_LINE_LENGTH);
-	}
-
-	@Test
-	void nettyValidateHeadersMatchesHttpDecoderSpecDefault() {
-		assertThat(this.properties.getNetty().isValidateHeaders()).isTrue();
-	}
-
-	@Test
-	void nettyH2cMaxContentLengthMatchesHttpDecoderSpecDefault() {
-		assertThat(this.properties.getNetty().getH2cMaxContentLength().toBytes()).isZero();
-	}
-
-	@Test
-	void nettyInitialBufferSizeMatchesHttpDecoderSpecDefault() {
-		assertThat(this.properties.getNetty().getInitialBufferSize().toBytes())
-			.isEqualTo(HttpDecoderSpec.DEFAULT_INITIAL_BUFFER_SIZE);
-	}
-
-	private Connector getDefaultConnector() {
+	private Connector getDefaultConnector() throws Exception {
 		return new Connector(TomcatServletWebServerFactory.DEFAULT_PROTOCOL);
 	}
 
 	private AbstractProtocol<?> getDefaultProtocol() throws Exception {
-		return (AbstractProtocol<?>) Class.forName(TomcatServletWebServerFactory.DEFAULT_PROTOCOL)
-			.getDeclaredConstructor()
-			.newInstance();
+		return (AbstractProtocol<?>) Class.forName(TomcatServletWebServerFactory.DEFAULT_PROTOCOL).newInstance();
 	}
 
 	private void bind(String name, String value) {

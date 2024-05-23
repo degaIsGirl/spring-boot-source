@@ -28,7 +28,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 /**
- * {@link VehicleDetailsService} backed by a remote REST service.
+ * {@link VehicleDetailsService} backed by a remote REST services.
  *
  * @author Phillip Webb
  */

@@ -22,7 +22,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.jmx.export.annotation.ManagedAttribute;
 import org.springframework.jmx.export.annotation.ManagedResource;
 
-@ConfigurationProperties(prefix = "service", ignoreUnknownFields = false)
+@ConfigurationProperties(prefix = "services", ignoreUnknownFields = false)
 @ManagedResource
 public class ServiceProperties {
 

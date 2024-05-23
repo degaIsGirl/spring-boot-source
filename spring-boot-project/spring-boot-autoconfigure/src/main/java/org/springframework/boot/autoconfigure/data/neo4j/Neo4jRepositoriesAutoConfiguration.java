@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,15 @@
 
 package org.springframework.boot.autoconfigure.data.neo4j;
 
-import org.neo4j.driver.Driver;
+import org.neo4j.ogm.session.Neo4jSession;
 
-import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.data.ConditionalOnRepositoryType;
-import org.springframework.boot.autoconfigure.data.RepositoryType;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.neo4j.core.Neo4jTemplate;
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.config.EnableNeo4jRepositories;
 import org.springframework.data.neo4j.repository.config.Neo4jRepositoryConfigurationExtension;
@@ -36,10 +34,10 @@ import org.springframework.data.neo4j.repository.support.Neo4jRepositoryFactoryB
  * {@link EnableAutoConfiguration Auto-configuration} for Spring Data's Neo4j
  * Repositories.
  * <p>
- * Activates when there is no bean of type {@link Neo4jRepositoryFactoryBean} or
- * {@link Neo4jRepositoryConfigurationExtension} configured in the context, the Spring
- * Data Neo4j {@link Neo4jRepository} type is on the classpath, the Neo4j client driver
- * API is on the classpath, and there is no other configured {@link Neo4jRepository}.
+ * Activates when there is no bean of type {@link Neo4jRepositoryFactoryBean} configured
+ * in the context, the Spring Data Neo4j {@link Neo4jRepository} type is on the classpath,
+ * the Neo4j client driver API is on the classpath, and there is no other configured
+ * {@link Neo4jRepository}.
  * <p>
  * Once in effect, the auto-configuration is the equivalent of enabling Neo4j repositories
  * using the {@link EnableNeo4jRepositories @EnableNeo4jRepositories} annotation.
@@ -47,16 +45,16 @@ import org.springframework.data.neo4j.repository.support.Neo4jRepositoryFactoryB
  * @author Dave Syer
  * @author Oliver Gierke
  * @author Josh Long
- * @author Michael J. Simons
  * @since 1.4.0
  * @see EnableNeo4jRepositories
  */
-@AutoConfiguration(after = Neo4jDataAutoConfiguration.class)
-@ConditionalOnClass({ Driver.class, Neo4jRepository.class })
+@Configuration(proxyBeanMethods = false)
+@ConditionalOnClass({ Neo4jSession.class, Neo4jRepository.class })
 @ConditionalOnMissingBean({ Neo4jRepositoryFactoryBean.class, Neo4jRepositoryConfigurationExtension.class })
-@ConditionalOnBean(Neo4jTemplate.class)
-@ConditionalOnRepositoryType(store = "neo4j", type = RepositoryType.IMPERATIVE)
+@ConditionalOnProperty(prefix = "spring.data.neo4j.repositories", name = "enabled", havingValue = "true",
+		matchIfMissing = true)
 @Import(Neo4jRepositoriesRegistrar.class)
+@AutoConfigureAfter(Neo4jDataAutoConfiguration.class)
 public class Neo4jRepositoriesAutoConfiguration {
 
 }

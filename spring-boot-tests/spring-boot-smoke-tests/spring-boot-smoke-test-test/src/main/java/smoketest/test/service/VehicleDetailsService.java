@@ -19,7 +19,7 @@ package smoketest.test.service;
 import smoketest.test.domain.VehicleIdentificationNumber;
 
 /**
- * A service to obtain {@link VehicleDetails} given a {@link VehicleIdentificationNumber}.
+ * A services to obtain {@link VehicleDetails} given a {@link VehicleIdentificationNumber}.
  *
  * @author Phillip Webb
  */

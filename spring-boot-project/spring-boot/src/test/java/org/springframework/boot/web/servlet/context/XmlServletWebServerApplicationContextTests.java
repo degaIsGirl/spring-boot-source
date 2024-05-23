@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,14 @@
 
 package org.springframework.boot.web.servlet.context;
 
-import jakarta.servlet.Servlet;
+import javax.servlet.Servlet;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.boot.web.servlet.server.MockServletWebServerFactory;
 import org.springframework.core.io.ClassPathResource;
 
-import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.verify;
 
 /**
  * Tests for {@link XmlServletWebServerApplicationContext}.
@@ -31,9 +32,8 @@ import static org.mockito.BDDMockito.then;
  */
 class XmlServletWebServerApplicationContextTests {
 
-	private static final String PATH = XmlServletWebServerApplicationContextTests.class.getPackage()
-		.getName()
-		.replace('.', '/') + "/";
+	private static final String PATH = XmlServletWebServerApplicationContextTests.class.getPackage().getName()
+			.replace('.', '/') + "/";
 
 	private static final String FILE = "exampleEmbeddedWebApplicationConfiguration.xml";
 
@@ -84,7 +84,7 @@ class XmlServletWebServerApplicationContextTests {
 	private void verifyContext() {
 		MockServletWebServerFactory factory = this.context.getBean(MockServletWebServerFactory.class);
 		Servlet servlet = this.context.getBean(Servlet.class);
-		then(factory.getServletContext()).should().addServlet("servlet", servlet);
+		verify(factory.getServletContext()).addServlet("servlet", servlet);
 	}
 
 }

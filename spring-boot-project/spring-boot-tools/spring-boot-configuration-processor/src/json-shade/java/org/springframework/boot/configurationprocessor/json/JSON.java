@@ -29,7 +29,8 @@ class JSON {
 		if (value instanceof Boolean) {
 			return (Boolean) value;
 		}
-		if (value instanceof String stringValue) {
+		if (value instanceof String) {
+			String stringValue = (String) value;
 			if ("true".equalsIgnoreCase(stringValue)) {
 				return true;
 			}
@@ -51,8 +52,7 @@ class JSON {
 			try {
 				return Double.valueOf((String) value);
 			}
-			catch (NumberFormatException ex) {
-				// Ignore
+			catch (NumberFormatException ignored) {
 			}
 		}
 		return null;
@@ -69,8 +69,7 @@ class JSON {
 			try {
 				return (int) Double.parseDouble((String) value);
 			}
-			catch (NumberFormatException ex) {
-				// Ignore
+			catch (NumberFormatException ignored) {
 			}
 		}
 		return null;
@@ -87,8 +86,7 @@ class JSON {
 			try {
 				return (long) Double.parseDouble((String) value);
 			}
-			catch (NumberFormatException ex) {
-				// Ignore
+			catch (NumberFormatException ignored) {
 			}
 		}
 		return null;
@@ -104,21 +102,24 @@ class JSON {
 		return null;
 	}
 
-	public static JSONException typeMismatch(Object indexOrName, Object actual, String requiredType)
-			throws JSONException {
+	public static JSONException typeMismatch(Object indexOrName, Object actual,
+			String requiredType) throws JSONException {
 		if (actual == null) {
 			throw new JSONException("Value at " + indexOrName + " is null.");
 		}
-		throw new JSONException("Value " + actual + " at " + indexOrName + " of type " + actual.getClass().getName()
-				+ " cannot be converted to " + requiredType);
+		throw new JSONException("Value " + actual + " at " + indexOrName + " of type "
+				+ actual.getClass().getName() + " cannot be converted to "
+				+ requiredType);
 	}
 
-	public static JSONException typeMismatch(Object actual, String requiredType) throws JSONException {
+	public static JSONException typeMismatch(Object actual, String requiredType)
+			throws JSONException {
 		if (actual == null) {
 			throw new JSONException("Value is null.");
 		}
-		throw new JSONException("Value " + actual + " of type " + actual.getClass().getName()
-				+ " cannot be converted to " + requiredType);
+		throw new JSONException(
+				"Value " + actual + " of type " + actual.getClass().getName()
+						+ " cannot be converted to " + requiredType);
 	}
 
 }

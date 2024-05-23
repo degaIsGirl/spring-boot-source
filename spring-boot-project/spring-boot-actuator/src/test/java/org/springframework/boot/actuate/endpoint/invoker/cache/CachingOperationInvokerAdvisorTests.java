@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,25 +21,23 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
-import org.springframework.boot.actuate.endpoint.ApiVersion;
 import org.springframework.boot.actuate.endpoint.EndpointId;
 import org.springframework.boot.actuate.endpoint.OperationType;
 import org.springframework.boot.actuate.endpoint.SecurityContext;
+import org.springframework.boot.actuate.endpoint.http.ApiVersion;
 import org.springframework.boot.actuate.endpoint.invoke.OperationInvoker;
 import org.springframework.boot.actuate.endpoint.invoke.OperationParameters;
 import org.springframework.boot.actuate.endpoint.invoke.reflect.OperationMethod;
-import org.springframework.boot.actuate.endpoint.web.WebServerNamespace;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ReflectionUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.verify;
 
 /**
  * Tests for {@link CachingOperationInvokerAdvisor}.
@@ -47,7 +45,6 @@ import static org.mockito.BDDMockito.then;
  * @author Phillip Webb
  * @author Stephane Nicoll
  */
-@ExtendWith(MockitoExtension.class)
 class CachingOperationInvokerAdvisorTests {
 
 	@Mock
@@ -60,6 +57,7 @@ class CachingOperationInvokerAdvisorTests {
 
 	@BeforeEach
 	void setup() {
+		MockitoAnnotations.initMocks(this);
 		this.advisor = new CachingOperationInvokerAdvisor(this.timeToLive);
 	}
 
@@ -86,7 +84,7 @@ class CachingOperationInvokerAdvisorTests {
 		OperationInvoker advised = this.advisor.apply(EndpointId.of("foo"), OperationType.READ, parameters,
 				this.invoker);
 		assertThat(advised).isSameAs(this.invoker);
-		then(this.timeToLive).should().apply(EndpointId.of("foo"));
+		verify(this.timeToLive).apply(EndpointId.of("foo"));
 	}
 
 	@Test
@@ -96,7 +94,7 @@ class CachingOperationInvokerAdvisorTests {
 		OperationInvoker advised = this.advisor.apply(EndpointId.of("foo"), OperationType.READ, parameters,
 				this.invoker);
 		assertThat(advised).isSameAs(this.invoker);
-		then(this.timeToLive).should().apply(EndpointId.of("foo"));
+		verify(this.timeToLive).apply(EndpointId.of("foo"));
 	}
 
 	@Test
@@ -125,23 +123,6 @@ class CachingOperationInvokerAdvisorTests {
 		OperationParameters parameters = getParameters("getWithApiVersion", ApiVersion.class, String.class);
 		given(this.timeToLive.apply(any())).willReturn(100L);
 		assertAdviseIsApplied(parameters);
-	}
-
-	@Test
-	void applyWithWebServerNamespaceShouldAddAdvise() {
-		OperationParameters parameters = getParameters("getWithServerNamespace", WebServerNamespace.class,
-				String.class);
-		given(this.timeToLive.apply(any())).willReturn(100L);
-		assertAdviseIsApplied(parameters);
-	}
-
-	@Test
-	void applyWithMandatoryCachedAndNonCachedShouldAddAdvise() {
-		OperationParameters parameters = getParameters("getWithServerNamespaceAndOtherMandatory",
-				WebServerNamespace.class, String.class);
-		OperationInvoker advised = this.advisor.apply(EndpointId.of("foo"), OperationType.READ, parameters,
-				this.invoker);
-		assertThat(advised).isSameAs(this.invoker);
 	}
 
 	private void assertAdviseIsApplied(OperationParameters parameters) {
@@ -180,14 +161,6 @@ class CachingOperationInvokerAdvisorTests {
 		}
 
 		String getWithApiVersion(ApiVersion apiVersion, @Nullable String bar) {
-			return "";
-		}
-
-		String getWithServerNamespace(WebServerNamespace serverNamespace, @Nullable String bar) {
-			return "";
-		}
-
-		String getWithServerNamespaceAndOtherMandatory(WebServerNamespace serverNamespace, String bar) {
 			return "";
 		}
 

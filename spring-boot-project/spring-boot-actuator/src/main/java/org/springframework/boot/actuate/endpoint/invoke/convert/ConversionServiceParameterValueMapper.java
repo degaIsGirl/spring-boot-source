@@ -43,8 +43,8 @@ public class ConversionServiceParameterValueMapper implements ParameterValueMapp
 
 	/**
 	 * Create a new {@link ConversionServiceParameterValueMapper} instance backed by a
-	 * specific conversion service.
-	 * @param conversionService the conversion service
+	 * specific conversion services.
+	 * @param conversionService the conversion services
 	 */
 	public ConversionServiceParameterValueMapper(ConversionService conversionService) {
 		Assert.notNull(conversionService, "ConversionService must not be null");

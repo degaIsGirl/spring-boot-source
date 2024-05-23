@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,26 @@
 
 package org.springframework.boot.gradle.plugin;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.JarURLConnection;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.jar.Attributes;
+import java.util.jar.JarFile;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.ResolvableDependencies;
 import org.gradle.util.GradleVersion;
 
 import org.springframework.boot.gradle.dsl.SpringBootExtension;
-import org.springframework.boot.gradle.tasks.bundling.BootBuildImage;
 import org.springframework.boot.gradle.tasks.bundling.BootJar;
 import org.springframework.boot.gradle.tasks.bundling.BootWar;
-import org.springframework.boot.gradle.util.VersionExtractor;
 
 /**
  * Gradle plugin for Spring Boot.
@@ -39,12 +44,11 @@ import org.springframework.boot.gradle.util.VersionExtractor;
  * @author Dave Syer
  * @author Andy Wilkinson
  * @author Danny Hyun
- * @author Scott Frederick
  * @since 1.2.7
  */
 public class SpringBootPlugin implements Plugin<Project> {
 
-	private static final String SPRING_BOOT_VERSION = VersionExtractor.forClass(DependencyManagementPluginAction.class);
+	private static final String SPRING_BOOT_VERSION = determineSpringBootVersion();
 
 	/**
 	 * The name of the {@link Configuration} that contains Spring Boot archives.
@@ -65,48 +69,6 @@ public class SpringBootPlugin implements Plugin<Project> {
 	public static final String BOOT_WAR_TASK_NAME = "bootWar";
 
 	/**
-	 * The name of the default {@link BootBuildImage} task.
-	 * @since 2.3.0
-	 */
-	public static final String BOOT_BUILD_IMAGE_TASK_NAME = "bootBuildImage";
-
-	static final String BOOT_RUN_TASK_NAME = "bootRun";
-
-	static final String BOOT_TEST_RUN_TASK_NAME = "bootTestRun";
-
-	/**
-	 * The name of the {@code developmentOnly} configuration.
-	 * @since 2.3.0
-	 */
-	public static final String DEVELOPMENT_ONLY_CONFIGURATION_NAME = "developmentOnly";
-
-	/**
-	 * The name of the {@code testAndDevelopmentOnly} configuration.
-	 * @since 3.2.0
-	 */
-	public static final String TEST_AND_DEVELOPMENT_ONLY_CONFIGURATION_NAME = "testAndDevelopmentOnly";
-
-	/**
-	 * The name of the {@code productionRuntimeClasspath} configuration.
-	 */
-	public static final String PRODUCTION_RUNTIME_CLASSPATH_CONFIGURATION_NAME = "productionRuntimeClasspath";
-
-	/**
-	 * The name of the {@link ResolveMainClassName} task used to resolve a main class from
-	 * the output of the {@code main} source set.
-	 * @since 3.0.0
-	 */
-	public static final String RESOLVE_MAIN_CLASS_NAME_TASK_NAME = "resolveMainClassName";
-
-	/**
-	 * The name of the {@link ResolveMainClassName} task used to resolve a main class from
-	 * the output of the {@code test} source set then, if needed, the output of the
-	 * {@code main} source set.
-	 * @since 3.1.0
-	 */
-	public static final String RESOLVE_TEST_MAIN_CLASS_NAME_TASK_NAME = "resolveTestMainClassName";
-
-	/**
 	 * The coordinates {@code (group:name:version)} of the
 	 * {@code spring-boot-dependencies} bom.
 	 */
@@ -119,13 +81,13 @@ public class SpringBootPlugin implements Plugin<Project> {
 		createExtension(project);
 		Configuration bootArchives = createBootArchivesConfiguration(project);
 		registerPluginActions(project, bootArchives);
+		unregisterUnresolvedDependenciesAnalyzer(project);
 	}
 
 	private void verifyGradleVersion() {
-		GradleVersion currentVersion = GradleVersion.current();
-		if (currentVersion.compareTo(GradleVersion.version("7.5")) < 0) {
-			throw new GradleException("Spring Boot plugin requires Gradle 7.x (7.5 or later). "
-					+ "The current version is " + currentVersion);
+		if (GradleVersion.current().compareTo(GradleVersion.version("4.10")) < 0) {
+			throw new GradleException("Spring Boot plugin requires Gradle 4.10 or later. The current version is "
+					+ GradleVersion.current());
 		}
 	}
 
@@ -136,34 +98,59 @@ public class SpringBootPlugin implements Plugin<Project> {
 	private Configuration createBootArchivesConfiguration(Project project) {
 		Configuration bootArchives = project.getConfigurations().create(BOOT_ARCHIVES_CONFIGURATION_NAME);
 		bootArchives.setDescription("Configuration for Spring Boot archive artifacts.");
-		bootArchives.setCanBeResolved(false);
 		return bootArchives;
 	}
 
 	private void registerPluginActions(Project project, Configuration bootArchives) {
-		SinglePublishedArtifact singlePublishedArtifact = new SinglePublishedArtifact(bootArchives,
-				project.getArtifacts());
+		SinglePublishedArtifact singlePublishedArtifact = new SinglePublishedArtifact(bootArchives.getArtifacts());
 		List<PluginApplicationAction> actions = Arrays.asList(new JavaPluginAction(singlePublishedArtifact),
-				new WarPluginAction(singlePublishedArtifact), new DependencyManagementPluginAction(),
-				new ApplicationPluginAction(), new KotlinPluginAction(), new NativeImagePluginAction(),
-				new CycloneDxPluginAction());
+				new WarPluginAction(singlePublishedArtifact), new MavenPluginAction(bootArchives.getUploadTaskName()),
+				new DependencyManagementPluginAction(), new ApplicationPluginAction(), new KotlinPluginAction());
 		for (PluginApplicationAction action : actions) {
-			withPluginClassOfAction(action,
-					(pluginClass) -> project.getPlugins().withType(pluginClass, (plugin) -> action.execute(project)));
+			Class<? extends Plugin<? extends Project>> pluginClass = action.getPluginClass();
+			if (pluginClass != null) {
+				project.getPlugins().withType(pluginClass, (plugin) -> action.execute(project));
+			}
 		}
 	}
 
-	private void withPluginClassOfAction(PluginApplicationAction action,
-			Consumer<Class<? extends Plugin<? extends Project>>> consumer) {
-		Class<? extends Plugin<? extends Project>> pluginClass;
+	private void unregisterUnresolvedDependenciesAnalyzer(Project project) {
+		UnresolvedDependenciesAnalyzer unresolvedDependenciesAnalyzer = new UnresolvedDependenciesAnalyzer();
+		project.getConfigurations().all((configuration) -> {
+			ResolvableDependencies incoming = configuration.getIncoming();
+			incoming.afterResolve((resolvableDependencies) -> {
+				if (incoming.equals(resolvableDependencies)) {
+					unresolvedDependenciesAnalyzer.analyze(configuration.getResolvedConfiguration()
+							.getLenientConfiguration().getUnresolvedModuleDependencies());
+				}
+			});
+		});
+		project.getGradle().buildFinished((buildResult) -> unresolvedDependenciesAnalyzer.buildFinished(project));
+	}
+
+	private static String determineSpringBootVersion() {
+		String implementationVersion = DependencyManagementPluginAction.class.getPackage().getImplementationVersion();
+		if (implementationVersion != null) {
+			return implementationVersion;
+		}
+		URL codeSourceLocation = DependencyManagementPluginAction.class.getProtectionDomain().getCodeSource()
+				.getLocation();
 		try {
-			pluginClass = action.getPluginClass();
+			URLConnection connection = codeSourceLocation.openConnection();
+			if (connection instanceof JarURLConnection) {
+				return getImplementationVersion(((JarURLConnection) connection).getJarFile());
+			}
+			try (JarFile jarFile = new JarFile(new File(codeSourceLocation.toURI()))) {
+				return getImplementationVersion(jarFile);
+			}
 		}
-		catch (Throwable ex) {
-			// Plugin class unavailable.
-			return;
+		catch (Exception ex) {
+			return null;
 		}
-		consumer.accept(pluginClass);
+	}
+
+	private static String getImplementationVersion(JarFile jarFile) throws IOException {
+		return jarFile.getManifest().getMainAttributes().getValue(Attributes.Name.IMPLEMENTATION_VERSION);
 	}
 
 }

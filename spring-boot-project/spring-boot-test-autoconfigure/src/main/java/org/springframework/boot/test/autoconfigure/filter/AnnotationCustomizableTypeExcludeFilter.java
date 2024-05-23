@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@ package org.springframework.boot.test.autoconfigure.filter;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.util.Arrays;
-import java.util.Objects;
 import java.util.Set;
 
 import org.springframework.beans.factory.BeanClassLoaderAware;
@@ -63,7 +61,10 @@ public abstract class AnnotationCustomizableTypeExcludeFilter extends TypeExclud
 				metadataReaderFactory)) {
 			return true;
 		}
-		return isUseDefaultFilters() && defaultInclude(metadataReader, metadataReaderFactory);
+		if (isUseDefaultFilters() && defaultInclude(metadataReader, metadataReaderFactory)) {
+			return true;
+		}
+		return false;
 	}
 
 	protected boolean defaultInclude(MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory)
@@ -121,7 +122,8 @@ public abstract class AnnotationCustomizableTypeExcludeFilter extends TypeExclud
 			return false;
 		}
 		AnnotationCustomizableTypeExcludeFilter other = (AnnotationCustomizableTypeExcludeFilter) obj;
-		boolean result = hasAnnotation() == other.hasAnnotation();
+		boolean result = true;
+		result = result && hasAnnotation() == other.hasAnnotation();
 		for (FilterType filterType : FilterType.values()) {
 			result &= ObjectUtils.nullSafeEquals(getFilters(filterType), other.getFilters(filterType));
 		}
@@ -137,11 +139,11 @@ public abstract class AnnotationCustomizableTypeExcludeFilter extends TypeExclud
 		int result = 0;
 		result = prime * result + Boolean.hashCode(hasAnnotation());
 		for (FilterType filterType : FilterType.values()) {
-			result = prime * result + Arrays.hashCode(getFilters(filterType));
+			result = prime * result + ObjectUtils.nullSafeHashCode(getFilters(filterType));
 		}
 		result = prime * result + Boolean.hashCode(isUseDefaultFilters());
-		result = prime * result + Objects.hashCode(getDefaultIncludes());
-		result = prime * result + Objects.hashCode(getComponentIncludes());
+		result = prime * result + ObjectUtils.nullSafeHashCode(getDefaultIncludes());
+		result = prime * result + ObjectUtils.nullSafeHashCode(getComponentIncludes());
 		return result;
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,9 +41,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 /**
  * Tests for {@link UndertowWebServerFactoryCustomizer}.
@@ -77,29 +77,29 @@ class UndertowWebServerFactoryCustomizerTests {
 				"server.undertow.accesslog.dir=test-logs", "server.undertow.accesslog.rotate=false");
 		ConfigurableUndertowWebServerFactory factory = mock(ConfigurableUndertowWebServerFactory.class);
 		this.customizer.customize(factory);
-		then(factory).should().setAccessLogEnabled(true);
-		then(factory).should().setAccessLogPattern("foo");
-		then(factory).should().setAccessLogPrefix("test_log");
-		then(factory).should().setAccessLogSuffix("txt");
-		then(factory).should().setAccessLogDirectory(new File("test-logs"));
-		then(factory).should().setAccessLogRotate(false);
+		verify(factory).setAccessLogEnabled(true);
+		verify(factory).setAccessLogPattern("foo");
+		verify(factory).setAccessLogPrefix("test_log");
+		verify(factory).setAccessLogSuffix("txt");
+		verify(factory).setAccessLogDirectory(new File("test-logs"));
+		verify(factory).setAccessLogRotate(false);
 	}
 
 	@Test
-	void customMaxHttpRequestHeaderSize() {
-		bind("server.max-http-request-header-size=2048");
+	void customMaxHttpHeaderSize() {
+		bind("server.max-http-header-size=2048");
 		assertThat(boundServerOption(UndertowOptions.MAX_HEADER_SIZE)).isEqualTo(2048);
 	}
 
 	@Test
-	void customMaxHttpRequestHeaderSizeIgnoredIfNegative() {
-		bind("server.max-http-request-header-size=-1");
+	void customMaxHttpHeaderSizeIgnoredIfNegative() {
+		bind("server.max-http-header-size=-1");
 		assertThat(boundServerOption(UndertowOptions.MAX_HEADER_SIZE)).isNull();
 	}
 
 	@Test
-	void customMaxHttpRequestHeaderSizeIgnoredIfZero() {
-		bind("server.max-http-request-header-size=0");
+	void customMaxHttpHeaderSizeIgnoredIfZero() {
+		bind("server.max-http-header-size=0");
 		assertThat(boundServerOption(UndertowOptions.MAX_HEADER_SIZE)).isNull();
 	}
 
@@ -134,32 +134,9 @@ class UndertowWebServerFactoryCustomizerTests {
 	}
 
 	@Test
-	void customizeIoThreads() {
-		bind("server.undertow.threads.io=4");
-		ConfigurableUndertowWebServerFactory factory = mock(ConfigurableUndertowWebServerFactory.class);
-		this.customizer.customize(factory);
-		then(factory).should().setIoThreads(4);
-	}
-
-	@Test
-	void customizeWorkerThreads() {
-		bind("server.undertow.threads.worker=10");
-		ConfigurableUndertowWebServerFactory factory = mock(ConfigurableUndertowWebServerFactory.class);
-		this.customizer.customize(factory);
-		then(factory).should().setWorkerThreads(10);
-	}
-
-	@Test
-	@Deprecated(forRemoval = true, since = "3.0.3")
 	void allowEncodedSlashes() {
 		bind("server.undertow.allow-encoded-slash=true");
 		assertThat(boundServerOption(UndertowOptions.ALLOW_ENCODED_SLASH)).isTrue();
-	}
-
-	@Test
-	void enableSlashDecoding() {
-		bind("server.undertow.decode-slash=true");
-		assertThat(boundServerOption(UndertowOptions.DECODE_SLASH)).isTrue();
 	}
 
 	@Test
@@ -209,14 +186,22 @@ class UndertowWebServerFactoryCustomizerTests {
 		this.environment.setProperty("DYNO", "-");
 		ConfigurableUndertowWebServerFactory factory = mock(ConfigurableUndertowWebServerFactory.class);
 		this.customizer.customize(factory);
-		then(factory).should().setUseForwardHeaders(true);
+		verify(factory).setUseForwardHeaders(true);
 	}
 
 	@Test
 	void defaultUseForwardHeaders() {
 		ConfigurableUndertowWebServerFactory factory = mock(ConfigurableUndertowWebServerFactory.class);
 		this.customizer.customize(factory);
-		then(factory).should().setUseForwardHeaders(false);
+		verify(factory).setUseForwardHeaders(false);
+	}
+
+	@Test
+	void setUseForwardHeaders() {
+		this.serverProperties.setUseForwardHeaders(true);
+		ConfigurableUndertowWebServerFactory factory = mock(ConfigurableUndertowWebServerFactory.class);
+		this.customizer.customize(factory);
+		verify(factory).setUseForwardHeaders(true);
 	}
 
 	@Test
@@ -224,7 +209,7 @@ class UndertowWebServerFactoryCustomizerTests {
 		this.serverProperties.setForwardHeadersStrategy(ServerProperties.ForwardHeadersStrategy.NATIVE);
 		ConfigurableUndertowWebServerFactory factory = mock(ConfigurableUndertowWebServerFactory.class);
 		this.customizer.customize(factory);
-		then(factory).should().setUseForwardHeaders(true);
+		verify(factory).setUseForwardHeaders(true);
 	}
 
 	@Test
@@ -233,7 +218,7 @@ class UndertowWebServerFactoryCustomizerTests {
 		this.serverProperties.setForwardHeadersStrategy(ServerProperties.ForwardHeadersStrategy.NONE);
 		ConfigurableUndertowWebServerFactory factory = mock(ConfigurableUndertowWebServerFactory.class);
 		this.customizer.customize(factory);
-		then(factory).should().setUseForwardHeaders(false);
+		verify(factory).setUseForwardHeaders(false);
 	}
 
 	private <T> T boundServerOption(Option<T> option) {
@@ -256,9 +241,9 @@ class UndertowWebServerFactoryCustomizerTests {
 		ConfigurableUndertowWebServerFactory factory = mock(ConfigurableUndertowWebServerFactory.class);
 		willAnswer((invocation) -> {
 			Object argument = invocation.getArgument(0);
-			Arrays.stream((argument instanceof UndertowBuilderCustomizer undertowCustomizer)
-					? new UndertowBuilderCustomizer[] { undertowCustomizer } : (UndertowBuilderCustomizer[]) argument)
-				.forEach((customizer) -> customizer.customize(builder));
+			Arrays.stream((argument instanceof UndertowBuilderCustomizer)
+					? new UndertowBuilderCustomizer[] { (UndertowBuilderCustomizer) argument }
+					: (UndertowBuilderCustomizer[]) argument).forEach((customizer) -> customizer.customize(builder));
 			return null;
 		}).given(factory).addBuilderCustomizers(any());
 		return factory;

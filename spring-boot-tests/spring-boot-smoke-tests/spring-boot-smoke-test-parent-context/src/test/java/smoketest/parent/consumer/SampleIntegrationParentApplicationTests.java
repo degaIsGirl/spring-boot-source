@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import org.springframework.util.StreamUtils;
 import static org.hamcrest.Matchers.containsString;
 
 /**
- * Basic integration tests for service demo application.
+ * Basic integration tests for services demo application.
  *
  * @author Dave Syer
  * @author Andy Wilkinson
@@ -46,21 +46,29 @@ import static org.hamcrest.Matchers.containsString;
 class SampleIntegrationParentApplicationTests {
 
 	@Test
-	void testVanillaExchange(@TempDir Path temp) {
+	void testVanillaExchange(@TempDir Path temp) throws Exception {
 		File inputDir = new File(temp.toFile(), "input");
 		File outputDir = new File(temp.toFile(), "output");
-		try (ConfigurableApplicationContext app = SpringApplication.run(SampleParentContextApplication.class,
-				"--service.input-dir=" + inputDir, "--service.output-dir=" + outputDir)) {
-			try (ConfigurableApplicationContext producer = SpringApplication.run(ProducerApplication.class,
-					"--service.input-dir=" + inputDir, "--service.output-dir=" + outputDir, "World")) {
+		ConfigurableApplicationContext app = SpringApplication.run(SampleParentContextApplication.class,
+				"--services.input-dir=" + inputDir, "--services.output-dir=" + outputDir);
+		try {
+			ConfigurableApplicationContext producer = SpringApplication.run(ProducerApplication.class,
+					"--services.input-dir=" + inputDir, "--services.output-dir=" + outputDir, "World");
+			try {
 				awaitOutputContaining(outputDir, "Hello World");
 			}
+			finally {
+				producer.close();
+			}
+		}
+		finally {
+			app.close();
 		}
 	}
 
-	private void awaitOutputContaining(File outputDir, String requiredContents) {
-		Awaitility.waitAtMost(Duration.ofSeconds(30))
-			.until(() -> outputIn(outputDir), containsString(requiredContents));
+	private void awaitOutputContaining(File outputDir, String requiredContents) throws Exception {
+		Awaitility.waitAtMost(Duration.ofSeconds(30)).until(() -> outputIn(outputDir),
+				containsString(requiredContents));
 	}
 
 	private String outputIn(File outputDir) throws IOException {
@@ -73,7 +81,7 @@ class SampleIntegrationParentApplicationTests {
 
 	private Resource[] findResources(File outputDir) throws IOException {
 		return ResourcePatternUtils.getResourcePatternResolver(new DefaultResourceLoader())
-			.getResources("file:" + outputDir.getAbsolutePath() + "/*.txt");
+				.getResources("file:" + outputDir.getAbsolutePath() + "/*.txt");
 	}
 
 	private String readResources(Resource[] resources) throws IOException {

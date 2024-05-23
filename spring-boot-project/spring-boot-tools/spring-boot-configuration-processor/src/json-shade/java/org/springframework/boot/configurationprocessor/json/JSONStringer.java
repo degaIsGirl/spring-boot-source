@@ -64,7 +64,7 @@ public class JSONStringer {
 
 	/**
 	 * Lexical scoping elements within this stringer, necessary to insert the appropriate
-	 * separator characters (i.e. commas and colons) and to detect nesting errors.
+	 * separator characters (ie. commas and colons) and to detect nesting errors.
 	 */
 	enum Scope {
 
@@ -173,7 +173,7 @@ public class JSONStringer {
 	 * @throws JSONException if processing of json failed
 	 */
 	JSONStringer open(Scope empty, String openBracket) throws JSONException {
-		if (this.stack.isEmpty() && !this.out.isEmpty()) {
+		if (this.stack.isEmpty() && this.out.length() > 0) {
 			throw new JSONException("Nesting problem: multiple top-level roots");
 		}
 		beforeValue();
@@ -191,7 +191,8 @@ public class JSONStringer {
 	 * @return the JSON stringer
 	 * @throws JSONException if processing of json failed
 	 */
-	JSONStringer close(Scope empty, Scope nonempty, String closeBracket) throws JSONException {
+	JSONStringer close(Scope empty, Scope nonempty, String closeBracket)
+			throws JSONException {
 		Scope context = peek();
 		if (context != nonempty && context != empty) {
 			throw new JSONException("Nesting problem");
@@ -321,20 +322,40 @@ public class JSONStringer {
 			 * reverse solidus, and the control characters (U+0000 through U+001F)."
 			 */
 			switch (c) {
-				case '"', '\\', '/' -> this.out.append('\\').append(c);
-				case '\t' -> this.out.append("\\t");
-				case '\b' -> this.out.append("\\b");
-				case '\n' -> this.out.append("\\n");
-				case '\r' -> this.out.append("\\r");
-				case '\f' -> this.out.append("\\f");
-				default -> {
-					if (c <= 0x1F) {
-						this.out.append(String.format("\\u%04x", (int) c));
-					}
-					else {
-						this.out.append(c);
-					}
+			case '"':
+			case '\\':
+			case '/':
+				this.out.append('\\').append(c);
+				break;
+
+			case '\t':
+				this.out.append("\\t");
+				break;
+
+			case '\b':
+				this.out.append("\\b");
+				break;
+
+			case '\n':
+				this.out.append("\\n");
+				break;
+
+			case '\r':
+				this.out.append("\\r");
+				break;
+
+			case '\f':
+				this.out.append("\\f");
+				break;
+
+			default:
+				if (c <= 0x1F) {
+					this.out.append(String.format("\\u%04x", (int) c));
 				}
+				else {
+					this.out.append(c);
+				}
+				break;
 			}
 
 		}
@@ -347,7 +368,9 @@ public class JSONStringer {
 		}
 
 		this.out.append("\n");
-		this.out.append(this.indent.repeat(this.stack.size()));
+		for (int i = 0; i < this.stack.size(); i++) {
+			this.out.append(this.indent);
+		}
 	}
 
 	/**
@@ -423,7 +446,7 @@ public class JSONStringer {
 	 */
 	@Override
 	public String toString() {
-		return this.out.isEmpty() ? null : this.out.toString();
+		return this.out.length() == 0 ? null : this.out.toString();
 	}
 
 }

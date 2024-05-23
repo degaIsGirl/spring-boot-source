@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 
 package org.springframework.boot.actuate.health;
-
-import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,28 +39,23 @@ class ReactiveHealthIndicatorImplementationTests {
 	@Test
 	void healthUp(CapturedOutput output) {
 		StepVerifier.create(new SimpleReactiveHealthIndicator().health())
-			.consumeNextWith((health) -> assertThat(health).isEqualTo(Health.up().build()))
-			.expectComplete()
-			.verify(Duration.ofSeconds(30));
+				.consumeNextWith((health) -> assertThat(health).isEqualTo(Health.up().build())).verifyComplete();
 		assertThat(output).doesNotContain("Health check failed for simple");
 	}
 
 	@Test
 	void healthDownWithCustomErrorMessage(CapturedOutput output) {
-		StepVerifier.create(new CustomErrorMessageReactiveHealthIndicator().health())
-			.consumeNextWith(
-					(health) -> assertThat(health).isEqualTo(Health.down(new UnsupportedOperationException()).build()))
-			.expectComplete()
-			.verify(Duration.ofSeconds(30));
+		StepVerifier.create(new CustomErrorMessageReactiveHealthIndicator().health()).consumeNextWith(
+				(health) -> assertThat(health).isEqualTo(Health.down(new UnsupportedOperationException()).build()))
+				.verifyComplete();
 		assertThat(output).contains("Health check failed for custom");
 	}
 
 	@Test
 	void healthDownWithCustomErrorMessageFunction(CapturedOutput output) {
 		StepVerifier.create(new CustomErrorMessageFunctionReactiveHealthIndicator().health())
-			.consumeNextWith((health) -> assertThat(health).isEqualTo(Health.down(new RuntimeException()).build()))
-			.expectComplete()
-			.verify(Duration.ofSeconds(30));
+				.consumeNextWith((health) -> assertThat(health).isEqualTo(Health.down(new RuntimeException()).build()))
+				.verifyComplete();
 		assertThat(output).contains("Health check failed with RuntimeException");
 	}
 

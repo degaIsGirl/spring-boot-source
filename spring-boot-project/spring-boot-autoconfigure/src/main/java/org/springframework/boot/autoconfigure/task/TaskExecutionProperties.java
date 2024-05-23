@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * @author Stephane Nicoll
  * @author Filip Hrisafov
- * @author Yanming Zhou
  * @since 2.1.0
  */
 @ConfigurationProperties("spring.task.execution")
@@ -33,18 +32,12 @@ public class TaskExecutionProperties {
 
 	private final Pool pool = new Pool();
 
-	private final Simple simple = new Simple();
-
 	private final Shutdown shutdown = new Shutdown();
 
 	/**
 	 * Prefix to use for the names of newly created threads.
 	 */
 	private String threadNamePrefix = "task-";
-
-	public Simple getSimple() {
-		return this.simple;
-	}
 
 	public Pool getPool() {
 		return this.pool;
@@ -60,24 +53,6 @@ public class TaskExecutionProperties {
 
 	public void setThreadNamePrefix(String threadNamePrefix) {
 		this.threadNamePrefix = threadNamePrefix;
-	}
-
-	public static class Simple {
-
-		/**
-		 * Set the maximum number of parallel accesses allowed. -1 indicates no
-		 * concurrency limit at all.
-		 */
-		private Integer concurrencyLimit;
-
-		public Integer getConcurrencyLimit() {
-			return this.concurrencyLimit;
-		}
-
-		public void setConcurrencyLimit(Integer concurrencyLimit) {
-			this.concurrencyLimit = concurrencyLimit;
-		}
-
 	}
 
 	public static class Pool {
@@ -110,8 +85,6 @@ public class TaskExecutionProperties {
 		 * Time limit for which threads may remain idle before being terminated.
 		 */
 		private Duration keepAlive = Duration.ofSeconds(60);
-
-		private final Shutdown shutdown = new Shutdown();
 
 		public int getQueueCapacity() {
 			return this.queueCapacity;
@@ -151,28 +124,6 @@ public class TaskExecutionProperties {
 
 		public void setKeepAlive(Duration keepAlive) {
 			this.keepAlive = keepAlive;
-		}
-
-		public Shutdown getShutdown() {
-			return this.shutdown;
-		}
-
-		public static class Shutdown {
-
-			/**
-			 * Whether to accept further tasks after the application context close phase
-			 * has begun.
-			 */
-			private boolean acceptTasksAfterContextClose;
-
-			public boolean isAcceptTasksAfterContextClose() {
-				return this.acceptTasksAfterContextClose;
-			}
-
-			public void setAcceptTasksAfterContextClose(boolean acceptTasksAfterContextClose) {
-				this.acceptTasksAfterContextClose = acceptTasksAfterContextClose;
-			}
-
 		}
 
 	}

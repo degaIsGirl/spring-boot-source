@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@
 
 package org.springframework.boot.web.servlet;
 
-import jakarta.servlet.Filter;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.FilterConfig;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpSessionIdListener;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServlet;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.context.ConfigurableApplicationContext;
@@ -38,7 +38,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Tests for {@link ServletContextInitializerBeans}.
  *
  * @author Andy Wilkinson
- * @author Moritz Halbritter
  */
 class ServletContextInitializerBeansTests {
 
@@ -49,7 +48,7 @@ class ServletContextInitializerBeansTests {
 		load(ServletConfiguration.class);
 		ServletContextInitializerBeans initializerBeans = new ServletContextInitializerBeans(
 				this.context.getBeanFactory());
-		assertThat(initializerBeans).hasSize(1);
+		assertThat(initializerBeans.size()).isEqualTo(1);
 		assertThat(initializerBeans.iterator()).toIterable().hasOnlyElementsOfType(TestServlet.class);
 	}
 
@@ -58,7 +57,7 @@ class ServletContextInitializerBeansTests {
 		load(FilterConfiguration.class);
 		ServletContextInitializerBeans initializerBeans = new ServletContextInitializerBeans(
 				this.context.getBeanFactory());
-		assertThat(initializerBeans).hasSize(1);
+		assertThat(initializerBeans.size()).isEqualTo(1);
 		assertThat(initializerBeans.iterator()).toIterable().hasOnlyElementsOfType(TestFilter.class);
 	}
 
@@ -67,40 +66,8 @@ class ServletContextInitializerBeansTests {
 		load(TestConfiguration.class);
 		ServletContextInitializerBeans initializerBeans = new ServletContextInitializerBeans(
 				this.context.getBeanFactory(), TestServletContextInitializer.class);
-		assertThat(initializerBeans).hasSize(1);
+		assertThat(initializerBeans.size()).isEqualTo(1);
 		assertThat(initializerBeans.iterator()).toIterable().hasOnlyElementsOfType(TestServletContextInitializer.class);
-	}
-
-	@Test
-	void whenAnHttpSessionIdListenerBeanIsDefinedThenARegistrationBeanIsCreatedForIt() {
-		load(HttpSessionIdListenerConfiguration.class);
-		ServletContextInitializerBeans initializerBeans = new ServletContextInitializerBeans(
-				this.context.getBeanFactory());
-		assertThat(initializerBeans).hasSize(1);
-		assertThat(initializerBeans).first()
-			.isInstanceOf(ServletListenerRegistrationBean.class)
-			.extracting((initializer) -> ((ServletListenerRegistrationBean<?>) initializer).getListener())
-			.isInstanceOf(HttpSessionIdListener.class);
-	}
-
-	@Test
-	void classesThatImplementMultipleInterfacesAreRegisteredForAllOfThem() {
-		load(MultipleInterfacesConfiguration.class);
-		ServletContextInitializerBeans initializerBeans = new ServletContextInitializerBeans(
-				this.context.getBeanFactory());
-		assertThat(initializerBeans).hasSize(3);
-		assertThat(initializerBeans).element(0)
-			.isInstanceOf(ServletRegistrationBean.class)
-			.extracting((initializer) -> ((ServletRegistrationBean<?>) initializer).getServlet())
-			.isInstanceOf(TestServletAndFilterAndListener.class);
-		assertThat(initializerBeans).element(1)
-			.isInstanceOf(FilterRegistrationBean.class)
-			.extracting((initializer) -> ((FilterRegistrationBean<?>) initializer).getFilter())
-			.isInstanceOf(TestServletAndFilterAndListener.class);
-		assertThat(initializerBeans).element(2)
-			.isInstanceOf(ServletListenerRegistrationBean.class)
-			.extracting((initializer) -> ((ServletListenerRegistrationBean<?>) initializer).getListener())
-			.isInstanceOf(TestServletAndFilterAndListener.class);
 	}
 
 	private void load(Class<?>... configuration) {
@@ -128,16 +95,6 @@ class ServletContextInitializerBeansTests {
 	}
 
 	@Configuration(proxyBeanMethods = false)
-	static class MultipleInterfacesConfiguration {
-
-		@Bean
-		TestServletAndFilterAndListener testServletAndFilterAndListener() {
-			return new TestServletAndFilterAndListener();
-		}
-
-	}
-
-	@Configuration(proxyBeanMethods = false)
 	static class TestConfiguration {
 
 		@Bean
@@ -148,17 +105,6 @@ class ServletContextInitializerBeansTests {
 		@Bean
 		OtherTestServletContextInitializer otherTestServletContextInitializer() {
 			return new OtherTestServletContextInitializer();
-		}
-
-	}
-
-	@Configuration(proxyBeanMethods = false)
-	static class HttpSessionIdListenerConfiguration {
-
-		@Bean
-		HttpSessionIdListener httpSessionIdListener() {
-			return (event, oldId) -> {
-			};
 		}
 
 	}

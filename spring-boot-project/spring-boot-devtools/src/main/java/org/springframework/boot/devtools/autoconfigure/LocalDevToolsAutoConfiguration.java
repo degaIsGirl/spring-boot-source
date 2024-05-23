@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,6 @@ import java.io.File;
 import java.net.URL;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -35,7 +31,6 @@ import org.springframework.boot.devtools.classpath.ClassPathRestartStrategy;
 import org.springframework.boot.devtools.classpath.PatternClassPathRestartStrategy;
 import org.springframework.boot.devtools.filewatch.FileSystemWatcher;
 import org.springframework.boot.devtools.filewatch.FileSystemWatcherFactory;
-import org.springframework.boot.devtools.filewatch.SnapshotStateRepository;
 import org.springframework.boot.devtools.livereload.LiveReloadServer;
 import org.springframework.boot.devtools.restart.ConditionalOnInitializedRestarter;
 import org.springframework.boot.devtools.restart.RestartScope;
@@ -48,7 +43,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.GenericApplicationListener;
 import org.springframework.core.ResolvableType;
-import org.springframework.core.log.LogMessage;
 import org.springframework.util.StringUtils;
 
 /**
@@ -59,7 +53,7 @@ import org.springframework.util.StringUtils;
  * @author Vladimir Tsanev
  * @since 1.3.0
  */
-@AutoConfiguration
+@Configuration(proxyBeanMethods = false)
 @ConditionalOnInitializedRestarter
 @EnableConfigurationProperties(DevToolsProperties.class)
 public class LocalDevToolsAutoConfiguration {
@@ -106,9 +100,13 @@ public class LocalDevToolsAutoConfiguration {
 		}
 
 		@Bean
-		RestartingClassPathChangeChangedEventListener restartingClassPathChangedEventListener(
+		ApplicationListener<ClassPathChangedEvent> restartingClassPathChangedEventListener(
 				FileSystemWatcherFactory fileSystemWatcherFactory) {
-			return new RestartingClassPathChangeChangedEventListener(fileSystemWatcherFactory);
+			return (event) -> {
+				if (event.isRestartRequired()) {
+					Restarter.getInstance().restart(new FileWatchingFailureHandler(fileSystemWatcherFactory));
+				}
+			};
 		}
 
 		@Bean
@@ -143,14 +141,14 @@ public class LocalDevToolsAutoConfiguration {
 		private FileSystemWatcher newFileSystemWatcher() {
 			Restart restartProperties = this.properties.getRestart();
 			FileSystemWatcher watcher = new FileSystemWatcher(true, restartProperties.getPollInterval(),
-					restartProperties.getQuietPeriod(), SnapshotStateRepository.STATIC);
+					restartProperties.getQuietPeriod());
 			String triggerFile = restartProperties.getTriggerFile();
 			if (StringUtils.hasLength(triggerFile)) {
 				watcher.setTriggerFilter(new TriggerFileFilter(triggerFile));
 			}
 			List<File> additionalPaths = restartProperties.getAdditionalPaths();
 			for (File path : additionalPaths) {
-				watcher.addSourceDirectory(path.getAbsoluteFile());
+				watcher.addSourceFolder(path.getAbsoluteFile());
 			}
 			return watcher;
 		}
@@ -182,8 +180,8 @@ public class LocalDevToolsAutoConfiguration {
 
 		@Override
 		public void onApplicationEvent(ApplicationEvent event) {
-			if (event instanceof ContextRefreshedEvent || (event instanceof ClassPathChangedEvent classPathChangedEvent
-					&& !classPathChangedEvent.isRestartRequired())) {
+			if (event instanceof ContextRefreshedEvent || (event instanceof ClassPathChangedEvent
+					&& !((ClassPathChangedEvent) event).isRestartRequired())) {
 				this.liveReloadServer.triggerReload();
 			}
 		}
@@ -191,27 +189,6 @@ public class LocalDevToolsAutoConfiguration {
 		@Override
 		public int getOrder() {
 			return 0;
-		}
-
-	}
-
-	static class RestartingClassPathChangeChangedEventListener implements ApplicationListener<ClassPathChangedEvent> {
-
-		private static final Log logger = LogFactory.getLog(RestartingClassPathChangeChangedEventListener.class);
-
-		private final FileSystemWatcherFactory fileSystemWatcherFactory;
-
-		RestartingClassPathChangeChangedEventListener(FileSystemWatcherFactory fileSystemWatcherFactory) {
-			this.fileSystemWatcherFactory = fileSystemWatcherFactory;
-		}
-
-		@Override
-		public void onApplicationEvent(ClassPathChangedEvent event) {
-			if (event.isRestartRequired()) {
-				logger.info(LogMessage.format("Restarting due to %s", event.overview()));
-				logger.debug(LogMessage.format("Change set: %s", event.getChangeSet()));
-				Restarter.getInstance().restart(new FileWatchingFailureHandler(this.fileSystemWatcherFactory));
-			}
 		}
 
 	}

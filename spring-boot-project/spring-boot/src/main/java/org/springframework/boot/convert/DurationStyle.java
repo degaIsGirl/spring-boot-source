@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import org.springframework.util.StringUtils;
  * Duration format styles.
  *
  * @author Phillip Webb
- * @author Valentine Wu
  * @since 2.0.0
  */
 public enum DurationStyle {
@@ -37,7 +36,7 @@ public enum DurationStyle {
 	/**
 	 * Simple formatting, for example '1s'.
 	 */
-	SIMPLE("^([+-]?\\d+)([a-zA-Z]{0,2})$") {
+	SIMPLE("^([\\+\\-]?\\d+)([a-zA-Z]{0,2})$") {
 
 		@Override
 		public Duration parse(String value, ChronoUnit unit) {
@@ -46,7 +45,7 @@ public enum DurationStyle {
 				Assert.state(matcher.matches(), "Does not match simple duration pattern");
 				String suffix = matcher.group(2);
 				return (StringUtils.hasLength(suffix) ? Unit.fromSuffix(suffix) : Unit.fromChronoUnit(unit))
-					.parse(matcher.group(1));
+						.parse(matcher.group(1));
 			}
 			catch (Exception ex) {
 				throw new IllegalArgumentException("'" + value + "' is not a valid simple duration", ex);
@@ -63,7 +62,7 @@ public enum DurationStyle {
 	/**
 	 * ISO-8601 formatting.
 	 */
-	ISO8601("^[+-]?[pP].*$") {
+	ISO8601("^[\\+\\-]?P.*$") {
 
 		@Override
 		public Duration parse(String value, ChronoUnit unit) {
@@ -135,8 +134,7 @@ public enum DurationStyle {
 	 * Detect the style then parse the value to return a duration.
 	 * @param value the value to parse
 	 * @return the parsed duration
-	 * @throws IllegalArgumentException if the value is not a known style or cannot be
-	 * parsed
+	 * @throws IllegalStateException if the value is not a known style or cannot be parsed
 	 */
 	public static Duration detectAndParse(String value) {
 		return detectAndParse(value, null);
@@ -148,8 +146,7 @@ public enum DurationStyle {
 	 * @param unit the duration unit to use if the value doesn't specify one ({@code null}
 	 * will default to ms)
 	 * @return the parsed duration
-	 * @throws IllegalArgumentException if the value is not a known style or cannot be
-	 * parsed
+	 * @throws IllegalStateException if the value is not a known style or cannot be parsed
 	 */
 	public static Duration detectAndParse(String value, ChronoUnit unit) {
 		return detect(value).parse(value, unit);
@@ -159,7 +156,7 @@ public enum DurationStyle {
 	 * Detect the style from the given source value.
 	 * @param value the source value
 	 * @return the duration style
-	 * @throws IllegalArgumentException if the value is not a known style
+	 * @throws IllegalStateException if the value is not a known style
 	 */
 	public static DurationStyle detect(String value) {
 		Assert.notNull(value, "Value must not be null");
@@ -184,7 +181,7 @@ public enum DurationStyle {
 		/**
 		 * Microseconds.
 		 */
-		MICROS(ChronoUnit.MICROS, "us", (duration) -> duration.toNanos() / 1000L),
+		MICROS(ChronoUnit.MICROS, "us", (duration) -> duration.toMillis() * 1000L),
 
 		/**
 		 * Milliseconds.
@@ -215,7 +212,7 @@ public enum DurationStyle {
 
 		private final String suffix;
 
-		private final Function<Duration, Long> longValue;
+		private Function<Duration, Long> longValue;
 
 		Unit(ChronoUnit chronoUnit, String suffix, Function<Duration, Long> toUnit) {
 			this.chronoUnit = chronoUnit;

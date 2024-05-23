@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="spring-boot-starter-jooq" />
+        <module name="spring-boot-starter-json" />
+        <module name="spring-boot-starter-undertow" />
+        <module name="spring-boot-starter-data-neo4j" />
+        <module name="spring-boot-server-tests" />
+        <module name="spring-boot-starter-integration" />
+        <module name="spring-boot-starter" />
+        <module name="spring-boot-starter-batch" />
+        <module name="spring-boot-cli" />
+        <module name="spring-boot-starter-validation" />
+        <module name="spring-boot-devtools" />
+        <module name="spring-boot-configuration-processor-tests" />
+        <module name="spring-boot-starter-web-services" />
+        <module name="spring-boot-loader-tools" />
+        <module name="spring-boot-starter-data-couchbase" />
+        <module name="spring-boot-starter-jta-bitronix" />
+        <module name="spring-boot-starter-data-ldap" />
+        <module name="spring-boot-starter-jdbc" />
+        <module name="spring-boot-starter-aop" />
+        <module name="spring-boot-autoconfigure" />
+        <module name="spring-boot-starter-webflux" />
+        <module name="spring-boot-starter-amqp" />
+        <module name="spring-boot-starter-data-redis-reactive" />
+        <module name="spring-boot-starter-websocket" />
+        <module name="spring-boot-configuration-metadata" />
+        <module name="spring-boot-starter-cache" />
+        <module name="spring-boot-starter-reactor-netty" />
+        <module name="spring-boot-starter-data-elasticsearch" />
+        <module name="spring-boot-starter-cloud-connectors" />
+        <module name="spring-boot-starter-data-rest" />
+        <module name="spring-boot-starter-data-redis" />
+        <module name="spring-boot-lifecycle" />
+        <module name="spring-boot-starter-jersey" />
+        <module name="spring-boot" />
+        <module name="spring-boot-starter-mustache" />
+        <module name="spring-boot-starter-data-cassandra" />
+        <module name="spring-boot-starter-quartz" />
+        <module name="spring-boot-starter-logging" />
+        <module name="spring-boot-starter-log4j2" />
+        <module name="spring-boot-loader" />
+        <module name="spring-boot-starter-data-mongodb-reactive" />
+        <module name="spring-boot-starter-oauth2-resource-server" />
+        <module name="spring-boot-starter-tomcat" />
+        <module name="spring-boot-starter-oauth2-client" />
+        <module name="spring-boot-properties-migrator" />
+        <module name="spring-boot-starter-data-cassandra-reactive" />
+        <module name="spring-boot-starter-jta-atomikos" />
+        <module name="spring-boot-starter-data-mongodb" />
+        <module name="spring-boot-actuator" />
+        <module name="spring-boot-test-support" />
+        <module name="spring-boot-starter-groovy-templates" />
+        <module name="spring-boot-actuator-autoconfigure" />
+        <module name="spring-boot-devtools-tests" />
+        <module name="spring-boot-starter-mail" />
+        <module name="spring-boot-starter-data-solr" />
+        <module name="spring-boot-test" />
+        <module name="spring-boot-antlib" />
+        <module name="spring-boot-starter-activemq" />
+        <module name="spring-boot-starter-test" />
+        <module name="spring-boot-configuration-docs" />
+        <module name="spring-boot-starter-thymeleaf" />
+        <module name="spring-boot-starter-freemarker" />
+        <module name="spring-boot-starter-rsocket" />
+        <module name="spring-boot-starter-hateoas" />
+        <module name="spring-boot-launch-script-tests" />
+        <module name="spring-boot-starter-data-couchbase-reactive" />
+        <module name="spring-boot-starter-jetty" />
+        <module name="spring-boot-starter-data-jdbc" />
+        <module name="spring-boot-starter-actuator" />
+        <module name="spring-boot-starter-web" />
+        <module name="spring-boot-maven-plugin" />
+        <module name="spring-boot-starter-data-jpa" />
+        <module name="spring-boot-starter-artemis" />
+        <module name="spring-boot-test-autoconfigure" />
+        <module name="spring-boot-docs" />
+        <module name="spring-boot-starter-security" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="spring-boot-smoke-test-activemq" target="1.8" />
+      <module name="spring-boot-smoke-test-actuator" target="1.8" />
+      <module name="spring-boot-smoke-test-actuator-custom-security" target="1.8" />
+      <module name="spring-boot-smoke-test-actuator-log4j2" target="1.8" />
+      <module name="spring-boot-smoke-test-actuator-noweb" target="1.8" />
+      <module name="spring-boot-smoke-test-actuator-ui" target="1.8" />
+      <module name="spring-boot-smoke-test-amqp" target="1.8" />
+      <module name="spring-boot-smoke-test-animated-banner" target="1.8" />
+      <module name="spring-boot-smoke-test-ant" target="1.8" />
+      <module name="spring-boot-smoke-test-aop" target="1.8" />
+      <module name="spring-boot-smoke-test-atmosphere" target="1.8" />
+      <module name="spring-boot-smoke-test-batch" target="1.8" />
+      <module name="spring-boot-smoke-test-cache" target="1.8" />
+      <module name="spring-boot-smoke-test-custom-layout" target="1.8" />
+      <module name="spring-boot-smoke-test-data-cassandra" target="1.8" />
+      <module name="spring-boot-smoke-test-data-couchbase" target="1.8" />
+      <module name="spring-boot-smoke-test-data-elasticsearch" target="1.8" />
+      <module name="spring-boot-smoke-test-data-jdbc" target="1.8" />
+      <module name="spring-boot-smoke-test-data-jpa" target="1.8" />
+      <module name="spring-boot-smoke-test-data-ldap" target="1.8" />
+      <module name="spring-boot-smoke-test-data-mongodb" target="1.8" />
+      <module name="spring-boot-smoke-test-data-neo4j" target="1.8" />
+      <module name="spring-boot-smoke-test-data-redis" target="1.8" />
+      <module name="spring-boot-smoke-test-data-rest" target="1.8" />
+      <module name="spring-boot-smoke-test-data-solr" target="1.8" />
+      <module name="spring-boot-smoke-test-devtools" target="1.8" />
+      <module name="spring-boot-smoke-test-flyway" target="1.8" />
+      <module name="spring-boot-smoke-test-hateoas" target="1.8" />
+      <module name="spring-boot-smoke-test-hibernate52" target="1.8" />
+      <module name="spring-boot-smoke-test-integration" target="1.8" />
+      <module name="spring-boot-smoke-test-jersey" target="1.8" />
+      <module name="spring-boot-smoke-test-jetty" target="1.8" />
+      <module name="spring-boot-smoke-test-jetty-jsp" target="1.8" />
+      <module name="spring-boot-smoke-test-jetty-ssl" target="1.8" />
+      <module name="spring-boot-smoke-test-jooq" target="1.8" />
+      <module name="spring-boot-smoke-test-jpa" target="1.8" />
+      <module name="spring-boot-smoke-test-jta-atomikos" target="1.8" />
+      <module name="spring-boot-smoke-test-jta-bitronix" target="1.8" />
+      <module name="spring-boot-smoke-test-jta-jndi" target="1.8" />
+      <module name="spring-boot-smoke-test-junit-jupiter" target="1.8" />
+      <module name="spring-boot-smoke-test-junit-vintage" target="1.8" />
+      <module name="spring-boot-smoke-test-kafka" target="1.8" />
+      <module name="spring-boot-smoke-test-liquibase" target="1.8" />
+      <module name="spring-boot-smoke-test-logback" target="1.8" />
+      <module name="spring-boot-smoke-test-oauth2-client" target="1.8" />
+      <module name="spring-boot-smoke-test-oauth2-resource-server" target="1.8" />
+      <module name="spring-boot-smoke-test-parent-context" target="1.8" />
+      <module name="spring-boot-smoke-test-profile" target="1.8" />
+      <module name="spring-boot-smoke-test-property-validation" target="1.8" />
+      <module name="spring-boot-smoke-test-quartz" target="1.8" />
+      <module name="spring-boot-smoke-test-reactive-oauth2-client" target="1.8" />
+      <module name="spring-boot-smoke-test-reactive-oauth2-resource-server" target="1.8" />
+      <module name="spring-boot-smoke-test-rsocket" target="1.8" />
+      <module name="spring-boot-smoke-test-saml2-service-provider" target="1.8" />
+      <module name="spring-boot-smoke-test-secure" target="1.8" />
+      <module name="spring-boot-smoke-test-secure-jersey" target="1.8" />
+      <module name="spring-boot-smoke-test-secure-webflux" target="1.8" />
+      <module name="spring-boot-smoke-test-servlet" target="1.8" />
+      <module name="spring-boot-smoke-test-session" target="1.8" />
+      <module name="spring-boot-smoke-test-session-webflux" target="1.8" />
+      <module name="spring-boot-smoke-test-simple" target="1.8" />
+      <module name="spring-boot-smoke-test-test" target="1.8" />
+      <module name="spring-boot-smoke-test-test-nomockito" target="1.8" />
+      <module name="spring-boot-smoke-test-testng" target="1.8" />
+      <module name="spring-boot-smoke-test-tomcat" target="1.8" />
+      <module name="spring-boot-smoke-test-tomcat-jsp" target="1.8" />
+      <module name="spring-boot-smoke-test-tomcat-multi-connectors" target="1.8" />
+      <module name="spring-boot-smoke-test-tomcat-ssl" target="1.8" />
+      <module name="spring-boot-smoke-test-traditional" target="1.8" />
+      <module name="spring-boot-smoke-test-undertow" target="1.8" />
+      <module name="spring-boot-smoke-test-undertow-ssl" target="1.8" />
+      <module name="spring-boot-smoke-test-war" target="1.8" />
+      <module name="spring-boot-smoke-test-web-freemarker" target="1.8" />
+      <module name="spring-boot-smoke-test-web-groovy-templates" target="1.8" />
+      <module name="spring-boot-smoke-test-web-jsp" target="1.8" />
+      <module name="spring-boot-smoke-test-web-method-security" target="1.8" />
+      <module name="spring-boot-smoke-test-web-mustache" target="1.8" />
+      <module name="spring-boot-smoke-test-web-secure" target="1.8" />
+      <module name="spring-boot-smoke-test-web-secure-custom" target="1.8" />
+      <module name="spring-boot-smoke-test-web-secure-jdbc" target="1.8" />
+      <module name="spring-boot-smoke-test-web-static" target="1.8" />
+      <module name="spring-boot-smoke-test-web-ui" target="1.8" />
+      <module name="spring-boot-smoke-test-webflux" target="1.8" />
+      <module name="spring-boot-smoke-test-webflux-coroutines" target="1.8" />
+      <module name="spring-boot-smoke-test-webservices" target="1.8" />
+      <module name="spring-boot-smoke-test-websocket-jetty" target="1.8" />
+      <module name="spring-boot-smoke-test-websocket-tomcat" target="1.8" />
+      <module name="spring-boot-smoke-test-websocket-undertow" target="1.8" />
+      <module name="spring-boot-smoke-test-xml" target="1.8" />
+    </bytecodeTargetLevel>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="spring-boot" options="-parameters" />
+      <module name="spring-boot-actuator" options="-parameters" />
+      <module name="spring-boot-actuator-autoconfigure" options="-parameters" />
+      <module name="spring-boot-antlib" options="-parameters" />
+      <module name="spring-boot-autoconfigure" options="-parameters" />
+      <module name="spring-boot-autoconfigure-processor" options="-parameters" />
+      <module name="spring-boot-cli" options="-parameters" />
+      <module name="spring-boot-configuration-docs" options="-parameters" />
+      <module name="spring-boot-configuration-metadata" options="-parameters" />
+      <module name="spring-boot-configuration-processor" options="-parameters" />
+      <module name="spring-boot-configuration-processor-tests" options="-parameters" />
+      <module name="spring-boot-devtools" options="-parameters" />
+      <module name="spring-boot-devtools-tests" options="-parameters" />
+      <module name="spring-boot-docs" options="-parameters" />
+      <module name="spring-boot-launch-script-tests" options="-parameters" />
+      <module name="spring-boot-lifecycle" options="-parameters" />
+      <module name="spring-boot-loader" options="-parameters" />
+      <module name="spring-boot-loader-tools" options="-parameters" />
+      <module name="spring-boot-maven-plugin" options="-parameters" />
+      <module name="spring-boot-properties-migrator" options="-parameters" />
+      <module name="spring-boot-server-tests" options="-parameters" />
+      <module name="spring-boot-smoke-test-activemq" options="-parameters" />
+      <module name="spring-boot-smoke-test-actuator" options="-parameters" />
+      <module name="spring-boot-smoke-test-actuator-custom-security" options="-parameters" />
+      <module name="spring-boot-smoke-test-actuator-log4j2" options="-parameters" />
+      <module name="spring-boot-smoke-test-actuator-noweb" options="-parameters" />
+      <module name="spring-boot-smoke-test-actuator-ui" options="-parameters" />
+      <module name="spring-boot-smoke-test-amqp" options="-parameters" />
+      <module name="spring-boot-smoke-test-animated-banner" options="-parameters" />
+      <module name="spring-boot-smoke-test-ant" options="-parameters" />
+      <module name="spring-boot-smoke-test-aop" options="-parameters" />
+      <module name="spring-boot-smoke-test-atmosphere" options="-parameters" />
+      <module name="spring-boot-smoke-test-batch" options="-parameters" />
+      <module name="spring-boot-smoke-test-cache" options="-parameters" />
+      <module name="spring-boot-smoke-test-custom-layout" options="-parameters" />
+      <module name="spring-boot-smoke-test-data-cassandra" options="-parameters" />
+      <module name="spring-boot-smoke-test-data-couchbase" options="-parameters" />
+      <module name="spring-boot-smoke-test-data-elasticsearch" options="-parameters" />
+      <module name="spring-boot-smoke-test-data-jdbc" options="-parameters" />
+      <module name="spring-boot-smoke-test-data-jpa" options="-parameters" />
+      <module name="spring-boot-smoke-test-data-ldap" options="-parameters" />
+      <module name="spring-boot-smoke-test-data-mongodb" options="-parameters" />
+      <module name="spring-boot-smoke-test-data-neo4j" options="-parameters" />
+      <module name="spring-boot-smoke-test-data-redis" options="-parameters" />
+      <module name="spring-boot-smoke-test-data-rest" options="-parameters" />
+      <module name="spring-boot-smoke-test-data-solr" options="-parameters" />
+      <module name="spring-boot-smoke-test-devtools" options="-parameters" />
+      <module name="spring-boot-smoke-test-flyway" options="-parameters" />
+      <module name="spring-boot-smoke-test-hateoas" options="-parameters" />
+      <module name="spring-boot-smoke-test-hibernate52" options="-parameters" />
+      <module name="spring-boot-smoke-test-integration" options="-parameters" />
+      <module name="spring-boot-smoke-test-jersey" options="-parameters" />
+      <module name="spring-boot-smoke-test-jetty" options="-parameters" />
+      <module name="spring-boot-smoke-test-jetty-jsp" options="-parameters" />
+      <module name="spring-boot-smoke-test-jetty-ssl" options="-parameters" />
+      <module name="spring-boot-smoke-test-jooq" options="-parameters" />
+      <module name="spring-boot-smoke-test-jpa" options="-parameters" />
+      <module name="spring-boot-smoke-test-jta-atomikos" options="-parameters" />
+      <module name="spring-boot-smoke-test-jta-bitronix" options="-parameters" />
+      <module name="spring-boot-smoke-test-jta-jndi" options="-parameters" />
+      <module name="spring-boot-smoke-test-junit-jupiter" options="-parameters" />
+      <module name="spring-boot-smoke-test-junit-vintage" options="-parameters" />
+      <module name="spring-boot-smoke-test-kafka" options="-parameters" />
+      <module name="spring-boot-smoke-test-liquibase" options="-parameters" />
+      <module name="spring-boot-smoke-test-logback" options="-parameters" />
+      <module name="spring-boot-smoke-test-oauth2-client" options="-parameters" />
+      <module name="spring-boot-smoke-test-oauth2-resource-server" options="-parameters" />
+      <module name="spring-boot-smoke-test-parent-context" options="-parameters" />
+      <module name="spring-boot-smoke-test-profile" options="-parameters" />
+      <module name="spring-boot-smoke-test-property-validation" options="-parameters" />
+      <module name="spring-boot-smoke-test-quartz" options="-parameters" />
+      <module name="spring-boot-smoke-test-reactive-oauth2-client" options="-parameters" />
+      <module name="spring-boot-smoke-test-reactive-oauth2-resource-server" options="-parameters" />
+      <module name="spring-boot-smoke-test-rsocket" options="-parameters" />
+      <module name="spring-boot-smoke-test-saml2-service-provider" options="-parameters" />
+      <module name="spring-boot-smoke-test-secure" options="-parameters" />
+      <module name="spring-boot-smoke-test-secure-jersey" options="-parameters" />
+      <module name="spring-boot-smoke-test-secure-webflux" options="-parameters" />
+      <module name="spring-boot-smoke-test-servlet" options="-parameters" />
+      <module name="spring-boot-smoke-test-session" options="-parameters" />
+      <module name="spring-boot-smoke-test-session-webflux" options="-parameters" />
+      <module name="spring-boot-smoke-test-simple" options="-parameters" />
+      <module name="spring-boot-smoke-test-test" options="-parameters" />
+      <module name="spring-boot-smoke-test-test-nomockito" options="-parameters" />
+      <module name="spring-boot-smoke-test-testng" options="-parameters" />
+      <module name="spring-boot-smoke-test-tomcat" options="-parameters" />
+      <module name="spring-boot-smoke-test-tomcat-jsp" options="-parameters" />
+      <module name="spring-boot-smoke-test-tomcat-multi-connectors" options="-parameters" />
+      <module name="spring-boot-smoke-test-tomcat-ssl" options="-parameters" />
+      <module name="spring-boot-smoke-test-traditional" options="-parameters" />
+      <module name="spring-boot-smoke-test-undertow" options="-parameters" />
+      <module name="spring-boot-smoke-test-undertow-ssl" options="-parameters" />
+      <module name="spring-boot-smoke-test-war" options="-parameters" />
+      <module name="spring-boot-smoke-test-web-freemarker" options="-parameters" />
+      <module name="spring-boot-smoke-test-web-groovy-templates" options="-parameters" />
+      <module name="spring-boot-smoke-test-web-jsp" options="-parameters" />
+      <module name="spring-boot-smoke-test-web-method-security" options="-parameters" />
+      <module name="spring-boot-smoke-test-web-mustache" options="-parameters" />
+      <module name="spring-boot-smoke-test-web-secure" options="-parameters" />
+      <module name="spring-boot-smoke-test-web-secure-custom" options="-parameters" />
+      <module name="spring-boot-smoke-test-web-secure-jdbc" options="-parameters" />
+      <module name="spring-boot-smoke-test-web-static" options="-parameters" />
+      <module name="spring-boot-smoke-test-web-ui" options="-parameters" />
+      <module name="spring-boot-smoke-test-webflux" options="-parameters" />
+      <module name="spring-boot-smoke-test-webflux-coroutines" options="-parameters" />
+      <module name="spring-boot-smoke-test-webservices" options="-parameters" />
+      <module name="spring-boot-smoke-test-websocket-jetty" options="-parameters" />
+      <module name="spring-boot-smoke-test-websocket-tomcat" options="-parameters" />
+      <module name="spring-boot-smoke-test-websocket-undertow" options="-parameters" />
+      <module name="spring-boot-smoke-test-xml" options="-parameters" />
+      <module name="spring-boot-smoke-tests-invoker" options="" />
+      <module name="spring-boot-starter" options="-parameters" />
+      <module name="spring-boot-starter-activemq" options="-parameters" />
+      <module name="spring-boot-starter-actuator" options="-parameters" />
+      <module name="spring-boot-starter-amqp" options="-parameters" />
+      <module name="spring-boot-starter-aop" options="-parameters" />
+      <module name="spring-boot-starter-artemis" options="-parameters" />
+      <module name="spring-boot-starter-batch" options="-parameters" />
+      <module name="spring-boot-starter-cache" options="-parameters" />
+      <module name="spring-boot-starter-cloud-connectors" options="-parameters" />
+      <module name="spring-boot-starter-data-cassandra" options="-parameters" />
+      <module name="spring-boot-starter-data-cassandra-reactive" options="-parameters" />
+      <module name="spring-boot-starter-data-couchbase" options="-parameters" />
+      <module name="spring-boot-starter-data-couchbase-reactive" options="-parameters" />
+      <module name="spring-boot-starter-data-elasticsearch" options="-parameters" />
+      <module name="spring-boot-starter-data-jdbc" options="-parameters" />
+      <module name="spring-boot-starter-data-jpa" options="-parameters" />
+      <module name="spring-boot-starter-data-ldap" options="-parameters" />
+      <module name="spring-boot-starter-data-mongodb" options="-parameters" />
+      <module name="spring-boot-starter-data-mongodb-reactive" options="-parameters" />
+      <module name="spring-boot-starter-data-neo4j" options="-parameters" />
+      <module name="spring-boot-starter-data-redis" options="-parameters" />
+      <module name="spring-boot-starter-data-redis-reactive" options="-parameters" />
+      <module name="spring-boot-starter-data-rest" options="-parameters" />
+      <module name="spring-boot-starter-data-solr" options="-parameters" />
+      <module name="spring-boot-starter-freemarker" options="-parameters" />
+      <module name="spring-boot-starter-groovy-templates" options="-parameters" />
+      <module name="spring-boot-starter-hateoas" options="-parameters" />
+      <module name="spring-boot-starter-integration" options="-parameters" />
+      <module name="spring-boot-starter-jdbc" options="-parameters" />
+      <module name="spring-boot-starter-jersey" options="-parameters" />
+      <module name="spring-boot-starter-jetty" options="-parameters" />
+      <module name="spring-boot-starter-jooq" options="-parameters" />
+      <module name="spring-boot-starter-json" options="-parameters" />
+      <module name="spring-boot-starter-jta-atomikos" options="-parameters" />
+      <module name="spring-boot-starter-jta-bitronix" options="-parameters" />
+      <module name="spring-boot-starter-log4j2" options="-parameters" />
+      <module name="spring-boot-starter-logging" options="-parameters" />
+      <module name="spring-boot-starter-mail" options="-parameters" />
+      <module name="spring-boot-starter-mustache" options="-parameters" />
+      <module name="spring-boot-starter-oauth2-client" options="-parameters" />
+      <module name="spring-boot-starter-oauth2-resource-server" options="-parameters" />
+      <module name="spring-boot-starter-quartz" options="-parameters" />
+      <module name="spring-boot-starter-reactor-netty" options="-parameters" />
+      <module name="spring-boot-starter-rsocket" options="-parameters" />
+      <module name="spring-boot-starter-security" options="-parameters" />
+      <module name="spring-boot-starter-test" options="-parameters" />
+      <module name="spring-boot-starter-thymeleaf" options="-parameters" />
+      <module name="spring-boot-starter-tomcat" options="-parameters" />
+      <module name="spring-boot-starter-undertow" options="-parameters" />
+      <module name="spring-boot-starter-validation" options="-parameters" />
+      <module name="spring-boot-starter-web" options="-parameters" />
+      <module name="spring-boot-starter-web-services" options="-parameters" />
+      <module name="spring-boot-starter-webflux" options="-parameters" />
+      <module name="spring-boot-starter-websocket" options="-parameters" />
+      <module name="spring-boot-test" options="-parameters" />
+      <module name="spring-boot-test-autoconfigure" options="-parameters" />
+      <module name="spring-boot-test-support" options="-parameters" />
+    </option>
+  </component>
+</project>

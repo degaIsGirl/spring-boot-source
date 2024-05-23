@@ -54,7 +54,7 @@ public @interface TestConfiguration {
 
 	/**
 	 * Specify whether {@link Bean @Bean} methods should get proxied in order to enforce
-	 * bean lifecycle behavior, e.g. to return shared singleton bean instances even in
+	 * bean ioc behavior, e.g. to return shared singleton bean instances even in
 	 * case of direct {@code @Bean} method calls in user code. This feature requires
 	 * method interception, implemented through a runtime-generated CGLIB subclass which
 	 * comes with limitations such as the configuration class and its methods not being

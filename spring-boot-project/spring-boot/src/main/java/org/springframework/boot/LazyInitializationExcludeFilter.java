@@ -37,7 +37,7 @@ import org.springframework.beans.factory.support.AbstractBeanDefinition;
  * </pre>
  * <p>
  * NOTE: Beans of this type will be instantiated very early in the spring application
- * lifecycle so they should generally be declared static and not have any dependencies.
+ * ioc so they should generally be declared static and not have any dependencies.
  *
  * @author Tyler Van Gorder
  * @author Philip Webb

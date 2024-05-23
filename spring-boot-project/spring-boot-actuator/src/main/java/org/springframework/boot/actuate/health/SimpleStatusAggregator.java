@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.springframework.util.CollectionUtils;
@@ -36,9 +37,6 @@ import org.springframework.util.ObjectUtils;
 public class SimpleStatusAggregator implements StatusAggregator {
 
 	private static final List<String> DEFAULT_ORDER;
-
-	static final StatusAggregator INSTANCE;
-
 	static {
 		List<String> defaultOrder = new ArrayList<>();
 		defaultOrder.add(Status.DOWN.getCode());
@@ -46,7 +44,6 @@ public class SimpleStatusAggregator implements StatusAggregator {
 		defaultOrder.add(Status.UP.getCode());
 		defaultOrder.add(Status.UNKNOWN.getCode());
 		DEFAULT_ORDER = Collections.unmodifiableList(getUniformCodes(defaultOrder.stream()));
-		INSTANCE = new SimpleStatusAggregator();
 	}
 
 	private final List<String> order;
@@ -80,7 +77,7 @@ public class SimpleStatusAggregator implements StatusAggregator {
 	}
 
 	private static List<String> getUniformCodes(Stream<String> codes) {
-		return codes.map(SimpleStatusAggregator::getUniformCode).toList();
+		return codes.map(SimpleStatusAggregator::getUniformCode).collect(Collectors.toList());
 	}
 
 	private static String getUniformCode(String code) {
@@ -88,8 +85,7 @@ public class SimpleStatusAggregator implements StatusAggregator {
 			return null;
 		}
 		StringBuilder builder = new StringBuilder();
-		for (int i = 0; i < code.length(); i++) {
-			char ch = code.charAt(i);
+		for (char ch : code.toCharArray()) {
 			if (Character.isAlphabetic(ch) || Character.isDigit(ch)) {
 				builder.append(Character.toLowerCase(ch));
 			}
@@ -100,7 +96,7 @@ public class SimpleStatusAggregator implements StatusAggregator {
 	/**
 	 * {@link Comparator} used to order {@link Status}.
 	 */
-	private final class StatusComparator implements Comparator<Status> {
+	private class StatusComparator implements Comparator<Status> {
 
 		@Override
 		public int compare(Status s1, Status s2) {

@@ -18,11 +18,11 @@ package smoketest.actuator;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "service", ignoreUnknownFields = false)
+@ConfigurationProperties(prefix = "services", ignoreUnknownFields = false)
 public class ServiceProperties {
 
 	/**
-	 * Name of the service.
+	 * Name of the services.
 	 */
 	private String name = "World";
 

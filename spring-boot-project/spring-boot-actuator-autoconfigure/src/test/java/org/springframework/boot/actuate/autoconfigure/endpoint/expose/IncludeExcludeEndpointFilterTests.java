@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 package org.springframework.boot.actuate.autoconfigure.endpoint.expose;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
 import org.springframework.boot.actuate.endpoint.EndpointFilter;
 import org.springframework.boot.actuate.endpoint.EndpointId;
@@ -36,37 +36,43 @@ import static org.mockito.Mockito.mock;
  *
  * @author Phillip Webb
  */
-@ExtendWith(MockitoExtension.class)
 class IncludeExcludeEndpointFilterTests {
 
 	private IncludeExcludeEndpointFilter<?> filter;
 
+	@BeforeEach
+	void setup() {
+		MockitoAnnotations.initMocks(this);
+	}
+
 	@Test
 	void createWhenEndpointTypeIsNullShouldThrowException() {
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new IncludeExcludeEndpointFilter<>(null, new MockEnvironment(), "foo"))
-			.withMessageContaining("EndpointType must not be null");
+				.isThrownBy(() -> new IncludeExcludeEndpointFilter<>(null, new MockEnvironment(), "foo"))
+				.withMessageContaining("EndpointType must not be null");
 	}
 
 	@Test
 	void createWhenEnvironmentIsNullShouldThrowException() {
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new IncludeExcludeEndpointFilter<>(ExposableEndpoint.class, null, "foo"))
-			.withMessageContaining("Environment must not be null");
+				.isThrownBy(() -> new IncludeExcludeEndpointFilter<>(ExposableEndpoint.class, null, "foo"))
+				.withMessageContaining("Environment must not be null");
 	}
 
 	@Test
 	void createWhenPrefixIsNullShouldThrowException() {
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new IncludeExcludeEndpointFilter<>(ExposableEndpoint.class, new MockEnvironment(), null))
-			.withMessageContaining("Prefix must not be empty");
+				.isThrownBy(
+						() -> new IncludeExcludeEndpointFilter<>(ExposableEndpoint.class, new MockEnvironment(), null))
+				.withMessageContaining("Prefix must not be empty");
 	}
 
 	@Test
 	void createWhenPrefixIsEmptyShouldThrowException() {
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new IncludeExcludeEndpointFilter<>(ExposableEndpoint.class, new MockEnvironment(), ""))
-			.withMessageContaining("Prefix must not be empty");
+				.isThrownBy(
+						() -> new IncludeExcludeEndpointFilter<>(ExposableEndpoint.class, new MockEnvironment(), ""))
+				.withMessageContaining("Prefix must not be empty");
 	}
 
 	@Test
@@ -117,7 +123,7 @@ class IncludeExcludeEndpointFilterTests {
 		environment.setProperty("foo.include", "bar");
 		environment.setProperty("foo.exclude", "");
 		this.filter = new IncludeExcludeEndpointFilter<>(DifferentTestExposableWebEndpoint.class, environment, "foo");
-		assertThat(match()).isTrue();
+		assertThat(match(EndpointId.of("baz"))).isTrue();
 	}
 
 	@Test
@@ -143,7 +149,7 @@ class IncludeExcludeEndpointFilterTests {
 	}
 
 	@Test // gh-20997
-	void matchWhenDashInName() {
+	void matchWhenDashInName() throws Exception {
 		setupFilter("bus-refresh", "");
 		assertThat(match(EndpointId.of("bus-refresh"))).isTrue();
 	}
@@ -155,16 +161,10 @@ class IncludeExcludeEndpointFilterTests {
 		this.filter = new IncludeExcludeEndpointFilter<>(TestExposableWebEndpoint.class, environment, "foo", "def");
 	}
 
-	private boolean match() {
-		return match(null);
-	}
-
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private boolean match(EndpointId id) {
 		ExposableEndpoint<?> endpoint = mock(TestExposableWebEndpoint.class);
-		if (id != null) {
-			given(endpoint.getEndpointId()).willReturn(id);
-		}
+		given(endpoint.getEndpointId()).willReturn(id);
 		return ((EndpointFilter) this.filter).match(endpoint);
 	}
 

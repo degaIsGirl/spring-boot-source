@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,13 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Parameter;
 import java.util.Map;
 
-import jakarta.servlet.DispatcherType;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.DispatcherType;
+import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -42,7 +42,6 @@ import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguratio
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -51,10 +50,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.util.ReflectionUtils;
 import org.springframework.validation.BindException;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -71,9 +67,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * {@link SpringBootTest @SpringBootTest}.
  *
  * @author Dave Syer
- * @author Scott Frederick
  */
-@SpringBootTest(properties = { "server.error.include-message=always" })
+@SpringBootTest
 @DirtiesContext
 class BasicErrorControllerMockMvcTests {
 
@@ -105,11 +100,9 @@ class BasicErrorControllerMockMvcTests {
 	@Test
 	void testErrorWithNoContentResponseStatus() throws Exception {
 		MvcResult result = this.mockMvc.perform(get("/noContent").accept("some/thing"))
-			.andExpect(status().isNoContent())
-			.andReturn();
+				.andExpect(status().isNoContent()).andReturn();
 		MvcResult response = this.mockMvc.perform(new ErrorDispatcher(result, "/error"))
-			.andExpect(status().isNoContent())
-			.andReturn();
+				.andExpect(status().isNoContent()).andReturn();
 		String content = response.getResponse().getContentAsString();
 		assertThat(content).isEmpty();
 	}
@@ -124,14 +117,13 @@ class BasicErrorControllerMockMvcTests {
 		// And the rendered status code is always wrong (but would be 400 in a real
 		// system)
 		String content = response.getResponse().getContentAsString();
-		assertThat(content).contains("Validation failed");
+		assertThat(content).contains("Error count: 1");
 	}
 
 	@Test
 	void testDirectAccessForBrowserClient() throws Exception {
 		MvcResult response = this.mockMvc.perform(get("/error").accept(MediaType.TEXT_HTML))
-			.andExpect(status().is5xxServerError())
-			.andReturn();
+				.andExpect(status().is5xxServerError()).andReturn();
 		String content = response.getResponse().getContentAsString();
 		assertThat(content).contains("ERROR_BEAN");
 	}
@@ -180,16 +172,14 @@ class BasicErrorControllerMockMvcTests {
 			}
 
 			@RequestMapping("/bind")
-			String bind(@RequestAttribute(required = false) String foo) throws Exception {
+			String bind() throws Exception {
 				BindException error = new BindException(this, "test");
 				error.rejectValue("foo", "bar.error");
-				Parameter fooParameter = ReflectionUtils.findMethod(Errors.class, "bind", String.class)
-					.getParameters()[0];
-				throw new MethodArgumentNotValidException(MethodParameter.forParameter(fooParameter), error);
+				throw error;
 			}
 
 			@RequestMapping("/noContent")
-			void noContent() {
+			void noContent() throws Exception {
 				throw new NoContentException("Expected!");
 			}
 
@@ -221,9 +211,9 @@ class BasicErrorControllerMockMvcTests {
 
 	private class ErrorDispatcher implements RequestBuilder {
 
-		private final MvcResult result;
+		private MvcResult result;
 
-		private final String path;
+		private String path;
 
 		ErrorDispatcher(MvcResult result, String path) {
 			this.result = result;
@@ -235,7 +225,7 @@ class BasicErrorControllerMockMvcTests {
 			MockHttpServletRequest request = this.result.getRequest();
 			request.setDispatcherType(DispatcherType.ERROR);
 			request.setRequestURI(this.path);
-			request.setAttribute("jakarta.servlet.error.status_code", this.result.getResponse().getStatus());
+			request.setAttribute("javax.servlet.error.status_code", this.result.getResponse().getStatus());
 			return request;
 		}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,18 +24,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.test.annotation.DirtiesContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration tests for separate management and main service ports.
+ * Integration tests for separate management and main services ports.
  *
  * @author Dave Syer
  */
@@ -52,14 +51,14 @@ class ShutdownSampleActuatorApplicationTests {
 				this.restTemplate.withBasicAuth("user", "password").getForEntity("/", Map.class));
 		assertThat(entity.getStatusCode()).isEqualTo(HttpStatus.OK);
 		Map<String, Object> body = entity.getBody();
-		assertThat(body).containsEntry("message", "Hello Phil");
+		assertThat(body.get("message")).isEqualTo("Hello Phil");
 	}
 
 	@Test
 	@DirtiesContext
 	void testShutdown() {
 		ResponseEntity<Map<String, Object>> entity = asMapEntity(this.restTemplate.withBasicAuth("user", "password")
-			.postForEntity("/actuator/shutdown", null, Map.class));
+				.postForEntity("/actuator/shutdown", null, Map.class));
 		assertThat(entity.getStatusCode()).isEqualTo(HttpStatus.OK);
 		assertThat(((String) entity.getBody().get("message"))).contains("Shutting down");
 	}
@@ -70,12 +69,11 @@ class ShutdownSampleActuatorApplicationTests {
 	}
 
 	@Configuration(proxyBeanMethods = false)
-	static class SecurityConfiguration {
+	static class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
-		@Bean
-		SecurityFilterChain configure(HttpSecurity http) throws Exception {
-			http.csrf((csrf) -> csrf.disable());
-			return http.build();
+		@Override
+		protected void configure(HttpSecurity http) throws Exception {
+			http.csrf().disable();
 		}
 
 	}

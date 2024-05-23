@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import org.springframework.boot.logging.LoggingSystemProperty;
+import org.springframework.boot.logging.LoggingSystemProperties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,7 +31,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Tests for {@code log4j2-file.xml}.
  *
  * @author Andy Wilkinson
- * @author Scott Frederick
  */
 class Log4j2FileXmlTests extends Log4j2XmlTests {
 
@@ -42,9 +41,7 @@ class Log4j2FileXmlTests extends Log4j2XmlTests {
 	@AfterEach
 	void stopConfiguration() {
 		super.stopConfiguration();
-		for (LoggingSystemProperty property : LoggingSystemProperty.values()) {
-			System.getProperties().remove(property.getEnvironmentVariableName());
-		}
+		System.clearProperty(LoggingSystemProperties.LOG_FILE);
 	}
 
 	@Test
@@ -54,7 +51,7 @@ class Log4j2FileXmlTests extends Log4j2XmlTests {
 
 	@Test
 	void whenLogExceptionConversionWordIsSetThenFileAppenderUsesIt() {
-		withSystemProperty(LoggingSystemProperty.EXCEPTION_CONVERSION_WORD.getEnvironmentVariableName(), "custom",
+		withSystemProperty(LoggingSystemProperties.EXCEPTION_CONVERSION_WORD, "custom",
 				() -> assertThat(fileAppenderPattern()).contains("custom"));
 	}
 
@@ -65,18 +62,18 @@ class Log4j2FileXmlTests extends Log4j2XmlTests {
 
 	@Test
 	void whenLogLevelPatternIsSetThenFileAppenderUsesIt() {
-		withSystemProperty(LoggingSystemProperty.LEVEL_PATTERN.getEnvironmentVariableName(), "custom",
+		withSystemProperty(LoggingSystemProperties.LOG_LEVEL_PATTERN, "custom",
 				() -> assertThat(fileAppenderPattern()).contains("custom"));
 	}
 
 	@Test
 	void whenLogLDateformatPatternIsNotConfiguredThenFileAppenderUsesDefault() {
-		assertThat(fileAppenderPattern()).contains("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+		assertThat(fileAppenderPattern()).contains("yyyy-MM-dd HH:mm:ss.SSS");
 	}
 
 	@Test
 	void whenLogDateformatPatternIsSetThenFileAppenderUsesIt() {
-		withSystemProperty(LoggingSystemProperty.DATEFORMAT_PATTERN.getEnvironmentVariableName(), "dd-MM-yyyy",
+		withSystemProperty(LoggingSystemProperties.LOG_DATEFORMAT_PATTERN, "dd-MM-yyyy",
 				() -> assertThat(fileAppenderPattern()).contains("dd-MM-yyyy"));
 	}
 
@@ -87,8 +84,7 @@ class Log4j2FileXmlTests extends Log4j2XmlTests {
 
 	@Override
 	protected void prepareConfiguration() {
-		System.setProperty(LoggingSystemProperty.LOG_FILE.getEnvironmentVariableName(),
-				new File(this.temp, "test.log").getAbsolutePath());
+		System.setProperty(LoggingSystemProperties.LOG_FILE, new File(this.temp, "test.log").getAbsolutePath());
 		super.prepareConfiguration();
 	}
 

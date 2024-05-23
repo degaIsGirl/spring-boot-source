@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,48 +18,44 @@ package org.springframework.boot.maven;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Resource;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.toolchain.ToolchainManager;
+import org.apache.maven.shared.artifact.filter.collection.AbstractArtifactFeatureFilter;
+import org.apache.maven.shared.artifact.filter.collection.FilterArtifacts;
 
 import org.springframework.boot.loader.tools.FileUtils;
-import org.springframework.util.Assert;
-import org.springframework.util.ObjectUtils;
-import org.springframework.util.StringUtils;
+import org.springframework.boot.loader.tools.MainClassFinder;
 
 /**
- * Base class to run a Spring Boot application.
+ * Base class to run a spring application.
  *
  * @author Phillip Webb
  * @author Stephane Nicoll
  * @author David Liu
  * @author Daniel Young
  * @author Dmytro Nosan
- * @author Moritz Halbritter
  * @since 1.3.0
  * @see RunMojo
  * @see StartMojo
  */
 public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
+
+	private static final String SPRING_BOOT_APPLICATION_CLASS_NAME = "org.springframework.boot.autoconfigure.SpringBootApplication";
 
 	/**
 	 * The Maven project.
@@ -69,23 +65,9 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 	private MavenProject project;
 
 	/**
-	 * The current Maven session. This is used for toolchain manager API calls.
-	 * @since 2.3.0
-	 */
-	@Parameter(defaultValue = "${session}", readonly = true)
-	private MavenSession session;
-
-	/**
-	 * The toolchain manager to use to locate a custom JDK.
-	 * @since 2.3.0
-	 */
-	@Component
-	private ToolchainManager toolchainManager;
-
-	/**
 	 * Add maven resources to the classpath directly, this allows live in-place editing of
 	 * resources. Duplicate resources are removed from {@code target/classes} to prevent
-	 * them from appearing twice if {@code ClassLoader.getResources()} is called. Please
+	 * them to appear twice if {@code ClassLoader.getResources()} is called. Please
 	 * consider adding {@code spring-boot-devtools} to your project instead as it provides
 	 * this feature and many more.
 	 * @since 1.0.0
@@ -94,7 +76,16 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 	private boolean addResources = false;
 
 	/**
-	 * Path to agent jars.
+	 * Path to agent jar. NOTE: a forked process is required to use this feature.
+	 * @since 1.0.0
+	 * @deprecated since 2.2.0 in favor of {@code agents}
+	 */
+	@Deprecated
+	@Parameter(property = "spring-boot.run.agent")
+	private File[] agent;
+
+	/**
+	 * Path to agent jars. NOTE: a forked process is required to use this feature.
 	 * @since 2.2.0
 	 */
 	@Parameter(property = "spring-boot.run.agents")
@@ -109,7 +100,7 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 
 	/**
 	 * Current working directory to use for the application. If not specified, basedir
-	 * will be used.
+	 * will be used. NOTE: a forked process is required to use this feature.
 	 * @since 1.5.0
 	 */
 	@Parameter(property = "spring-boot.run.workingDirectory")
@@ -118,13 +109,15 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 	/**
 	 * JVM arguments that should be associated with the forked process used to run the
 	 * application. On command line, make sure to wrap multiple values between quotes.
+	 * NOTE: a forked process is required to use this feature.
 	 * @since 1.1.0
 	 */
 	@Parameter(property = "spring-boot.run.jvmArguments")
 	private String jvmArguments;
 
 	/**
-	 * List of JVM system properties to pass to the process.
+	 * List of JVM system properties to pass to the process. NOTE: a forked process is
+	 * required to use this feature.
 	 * @since 2.1.0
 	 */
 	@Parameter
@@ -132,7 +125,8 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 
 	/**
 	 * List of Environment variables that should be associated with the forked process
-	 * used to run the application.
+	 * used to run the application. NOTE: a forked process is required to use this
+	 * feature.
 	 * @since 2.1.0
 	 */
 	@Parameter
@@ -172,31 +166,36 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 	private String mainClass;
 
 	/**
-	 * Additional directories containing classes or resources that should be added to the
+	 * Additional folders besides the classes directory that should be added to the
 	 * classpath.
 	 * @since 1.0.0
-	 * @deprecated since 3.2.0 for removal in 3.4.0 in favor of
-	 * 'additionalClasspathElements'
 	 */
-	@Parameter(property = "spring-boot.run.directories")
-	@Deprecated(since = "3.2.0", forRemoval = true)
-	private String[] directories;
+	@Parameter(property = "spring-boot.run.folders")
+	private String[] folders;
 
 	/**
-	 * Additional classpath elements that should be added to the classpath. An element can
-	 * be a directory with classes and resources or a jar file.
-	 * @since 3.2.0
-	 */
-	@Parameter(property = "spring-boot.run.additional-classpath-elements")
-	private String[] additionalClasspathElements;
-
-	/**
-	 * Directory containing the classes and resource files that should be used to run the
-	 * application.
+	 * Directory containing the classes and resource files that should be packaged into
+	 * the archive.
 	 * @since 1.0.0
 	 */
 	@Parameter(defaultValue = "${project.build.outputDirectory}", required = true)
 	private File classesDirectory;
+
+	/**
+	 * Flag to indicate if the run processes should be forked. Disabling forking will
+	 * disable some features such as an agent, custom JVM arguments, devtools or
+	 * specifying the working directory to use.
+	 * @since 1.2.0
+	 */
+	@Parameter(property = "spring-boot.run.fork", defaultValue = "true")
+	private boolean fork;
+
+	/**
+	 * Flag to include the test classpath when running.
+	 * @since 1.3.0
+	 */
+	@Parameter(property = "spring-boot.run.useTestClasspath", defaultValue = "false")
+	private Boolean useTestClasspath;
 
 	/**
 	 * Skip the execution.
@@ -211,58 +210,109 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 			getLog().debug("skipping run as per configuration.");
 			return;
 		}
-		run(determineMainClass());
-	}
-
-	private String determineMainClass() throws MojoExecutionException {
-		if (this.mainClass != null) {
-			return this.mainClass;
-		}
-		return SpringBootApplicationClassFinder.findSingleClass(getClassesDirectories());
+		run(getStartClass());
 	}
 
 	/**
-	 * Returns the directories that contain the application's classes and resources. When
-	 * the application's main class has not been configured, each directory is searched in
-	 * turn for an appropriate main class.
-	 * @return the directories that contain the application's classes and resources
-	 * @since 3.1.0
+	 * Specify if the application process should be forked.
+	 * @return {@code true} if the application process should be forked
 	 */
-	protected List<File> getClassesDirectories() {
-		return List.of(this.classesDirectory);
+	protected boolean isFork() {
+		return this.fork;
 	}
 
-	protected abstract boolean isUseTestClasspath();
+	/**
+	 * Specify if fork should be enabled by default.
+	 * @return {@code true} if fork should be enabled by default
+	 * @see #logDisabledFork()
+	 * @deprecated as of 2.2.0 in favour of enabling forking by default.
+	 */
+	@Deprecated
+	protected boolean enableForkByDefault() {
+		return hasAgent() || hasJvmArgs() || hasEnvVariables() || hasWorkingDirectorySet();
+	}
+
+	private boolean hasAgent() {
+		File[] configuredAgents = determineAgents();
+		return (configuredAgents != null && configuredAgents.length > 0);
+	}
+
+	private boolean hasJvmArgs() {
+		return (this.jvmArguments != null && !this.jvmArguments.isEmpty())
+				|| (this.systemPropertyVariables != null && !this.systemPropertyVariables.isEmpty());
+	}
+
+	private boolean hasEnvVariables() {
+		return (this.environmentVariables != null && !this.environmentVariables.isEmpty());
+	}
+
+	private boolean hasWorkingDirectorySet() {
+		return this.workingDirectory != null;
+	}
 
 	private void run(String startClassName) throws MojoExecutionException, MojoFailureException {
+		boolean fork = isFork();
+		this.project.getProperties().setProperty("_spring.boot.fork.enabled", Boolean.toString(fork));
+		if (fork) {
+			doRunWithForkedJvm(startClassName);
+		}
+		else {
+			logDisabledFork();
+			runWithMavenJvm(startClassName, resolveApplicationArguments().asArray());
+		}
+	}
+
+	/**
+	 * Log a warning indicating that fork mode has been explicitly disabled while some
+	 * conditions are present that require to enable it.
+	 */
+	protected void logDisabledFork() {
+		if (getLog().isWarnEnabled()) {
+			if (hasAgent()) {
+				getLog().warn("Fork mode disabled, ignoring agent");
+			}
+			if (hasJvmArgs()) {
+				RunArguments runArguments = resolveJvmArguments();
+				getLog().warn("Fork mode disabled, ignoring JVM argument(s) ["
+						+ String.join(" ", runArguments.asArray()) + "]");
+			}
+			if (hasWorkingDirectorySet()) {
+				getLog().warn("Fork mode disabled, ignoring working directory configuration");
+			}
+		}
+	}
+
+	private void doRunWithForkedJvm(String startClassName) throws MojoExecutionException, MojoFailureException {
 		List<String> args = new ArrayList<>();
 		addAgents(args);
 		addJvmArgs(args);
 		addClasspath(args);
 		args.add(startClassName);
 		addArgs(args);
-		JavaProcessExecutor processExecutor = new JavaProcessExecutor(this.session, this.toolchainManager);
-		File workingDirectoryToUse = (this.workingDirectory != null) ? this.workingDirectory
-				: this.project.getBasedir();
-		if (getLog().isDebugEnabled()) {
-			getLog().debug("Working directory: " + workingDirectoryToUse);
-			getLog().debug("Java arguments: " + String.join(" ", args));
-		}
-		run(processExecutor, workingDirectoryToUse, args, determineEnvironmentVariables());
+		runWithForkedJvm((this.workingDirectory != null) ? this.workingDirectory : this.project.getBasedir(), args,
+				determineEnvironmentVariables());
 	}
 
 	/**
-	 * Run the application.
-	 * @param processExecutor the {@link JavaProcessExecutor} to use
+	 * Run with a forked VM, using the specified command line arguments.
 	 * @param workingDirectory the working directory of the forked JVM
 	 * @param args the arguments (JVM arguments and application arguments)
 	 * @param environmentVariables the environment variables
 	 * @throws MojoExecutionException in case of MOJO execution errors
 	 * @throws MojoFailureException in case of MOJO failures
-	 * @since 3.0.0
 	 */
-	protected abstract void run(JavaProcessExecutor processExecutor, File workingDirectory, List<String> args,
+	protected abstract void runWithForkedJvm(File workingDirectory, List<String> args,
 			Map<String, String> environmentVariables) throws MojoExecutionException, MojoFailureException;
+
+	/**
+	 * Run with the current VM, using the specified arguments.
+	 * @param startClassName the class to run
+	 * @param arguments the class arguments
+	 * @throws MojoExecutionException in case of MOJO execution errors
+	 * @throws MojoFailureException in case of MOJO failures
+	 */
+	protected abstract void runWithMavenJvm(String startClassName, String... arguments)
+			throws MojoExecutionException, MojoFailureException;
 
 	/**
 	 * Resolve the application arguments to use.
@@ -286,12 +336,12 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 	private void addArgs(List<String> args) {
 		RunArguments applicationArguments = resolveApplicationArguments();
 		Collections.addAll(args, applicationArguments.asArray());
-		logArguments("Application argument", applicationArguments.asArray());
+		logArguments("Application argument(s): ", applicationArguments.asArray());
 	}
 
 	private Map<String, String> determineEnvironmentVariables() {
 		EnvVariables envVariables = resolveEnvVariables();
-		logArguments("Environment variable", envVariables.asArray());
+		logArguments("Environment variable(s): ", envVariables.asArray());
 		return envVariables.asMap();
 	}
 
@@ -302,10 +352,9 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 	protected RunArguments resolveJvmArguments() {
 		StringBuilder stringBuilder = new StringBuilder();
 		if (this.systemPropertyVariables != null) {
-			stringBuilder.append(this.systemPropertyVariables.entrySet()
-				.stream()
-				.map((e) -> SystemPropertyFormatter.format(e.getKey(), e.getValue()))
-				.collect(Collectors.joining(" ")));
+			stringBuilder.append(this.systemPropertyVariables.entrySet().stream()
+					.map((e) -> SystemPropertyFormatter.format(e.getKey(), e.getValue()))
+					.collect(Collectors.joining(" ")));
 		}
 		if (this.jvmArguments != null) {
 			stringBuilder.append(" ").append(this.jvmArguments);
@@ -316,21 +365,26 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 	private void addJvmArgs(List<String> args) {
 		RunArguments jvmArguments = resolveJvmArguments();
 		Collections.addAll(args, jvmArguments.asArray());
-		logArguments("JVM argument", jvmArguments.asArray());
+		logArguments("JVM argument(s): ", jvmArguments.asArray());
 	}
 
 	private void addAgents(List<String> args) {
-		if (this.agents != null) {
+		File[] configuredAgents = determineAgents();
+		if (configuredAgents != null) {
 			if (getLog().isInfoEnabled()) {
-				getLog().info("Attaching agents: " + Arrays.asList(this.agents));
+				getLog().info("Attaching agents: " + Arrays.asList(configuredAgents));
 			}
-			for (File agent : this.agents) {
+			for (File agent : configuredAgents) {
 				args.add("-javaagent:" + agent);
 			}
 		}
 		if (this.noverify) {
 			args.add("-noverify");
 		}
+	}
+
+	private File[] determineAgents() {
+		return (this.agents != null) ? this.agents : this.agent;
 	}
 
 	private void addActiveProfileArgument(RunArguments arguments) {
@@ -343,7 +397,7 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 				}
 			}
 			arguments.getArgs().addFirst(arg.toString());
-			logArguments("Active profile", this.profiles);
+			logArguments("Active profile(s): ", this.profiles);
 		}
 	}
 
@@ -351,7 +405,7 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 		try {
 			StringBuilder classpath = new StringBuilder();
 			for (URL ele : getClassPathUrls()) {
-				if (!classpath.isEmpty()) {
+				if (classpath.length() > 0) {
 					classpath.append(File.pathSeparator);
 				}
 				classpath.append(new File(ele.toURI()));
@@ -360,38 +414,34 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 				getLog().debug("Classpath for forked process: " + classpath);
 			}
 			args.add("-cp");
-			if (needsClasspathArgFile()) {
-				args.add("@" + ArgFile.create(classpath).path());
-			}
-			else {
-				args.add(classpath.toString());
-			}
+			args.add(classpath.toString());
 		}
 		catch (Exception ex) {
 			throw new MojoExecutionException("Could not build classpath", ex);
 		}
 	}
 
-	private boolean needsClasspathArgFile() {
-		// Windows limits the maximum command length, so we use an argfile there
-		return runsOnWindows();
-	}
-
-	private boolean runsOnWindows() {
-		String os = System.getProperty("os.name");
-		if (!StringUtils.hasLength(os)) {
-			if (getLog().isWarnEnabled()) {
-				getLog().warn("System property os.name is not set");
+	private String getStartClass() throws MojoExecutionException {
+		String mainClass = this.mainClass;
+		if (mainClass == null) {
+			try {
+				mainClass = MainClassFinder.findSingleMainClass(this.classesDirectory,
+						SPRING_BOOT_APPLICATION_CLASS_NAME);
 			}
-			return false;
+			catch (IOException ex) {
+				throw new MojoExecutionException(ex.getMessage(), ex);
+			}
 		}
-		return os.toLowerCase(Locale.ROOT).contains("win");
+		if (mainClass == null) {
+			throw new MojoExecutionException("Unable to find a suitable main class, please add a 'mainClass' property");
+		}
+		return mainClass;
 	}
 
 	protected URL[] getClassPathUrls() throws MojoExecutionException {
 		try {
 			List<URL> urls = new ArrayList<>();
-			addAdditionalClasspathLocations(urls);
+			addUserDefinedFolders(urls);
 			addResources(urls);
 			addProjectClasses(urls);
 			addDependencies(urls);
@@ -402,14 +452,10 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 		}
 	}
 
-	private void addAdditionalClasspathLocations(List<URL> urls) throws MalformedURLException {
-		Assert.state(ObjectUtils.isEmpty(this.directories) || ObjectUtils.isEmpty(this.additionalClasspathElements),
-				"Either additionalClasspathElements or directories (deprecated) should be set, not both");
-		String[] elements = !ObjectUtils.isEmpty(this.additionalClasspathElements) ? this.additionalClasspathElements
-				: this.directories;
-		if (elements != null) {
-			for (String element : elements) {
-				urls.add(new File(element).toURI().toURL());
+	private void addUserDefinedFolders(List<URL> urls) throws MalformedURLException {
+		if (this.folders != null) {
+			for (String folder : this.folders) {
+				urls.add(new File(folder).toURI().toURL());
 			}
 		}
 	}
@@ -419,22 +465,18 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 			for (Resource resource : this.project.getResources()) {
 				File directory = new File(resource.getDirectory());
 				urls.add(directory.toURI().toURL());
-				for (File classesDirectory : getClassesDirectories()) {
-					FileUtils.removeDuplicatesFromOutputDirectory(classesDirectory, directory);
-				}
+				FileUtils.removeDuplicatesFromOutputDirectory(this.classesDirectory, directory);
 			}
 		}
 	}
 
 	private void addProjectClasses(List<URL> urls) throws MalformedURLException {
-		for (File classesDirectory : getClassesDirectories()) {
-			urls.add(classesDirectory.toURI().toURL());
-		}
+		urls.add(this.classesDirectory.toURI().toURL());
 	}
 
 	private void addDependencies(List<URL> urls) throws MalformedURLException, MojoExecutionException {
-		Set<Artifact> artifacts = (isUseTestClasspath()) ? filterDependencies(this.project.getArtifacts())
-				: filterDependencies(this.project.getArtifacts(), new ExcludeTestScopeArtifactFilter());
+		FilterArtifacts filters = (this.useTestClasspath ? getFilters() : getFilters(new TestArtifactFilter()));
+		Set<Artifact> artifacts = filterDependencies(this.project.getArtifacts(), filters);
 		for (Artifact artifact : artifacts) {
 			if (artifact.getFile() != null) {
 				urls.add(artifact.getFile().toURI().toURL());
@@ -442,11 +484,95 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 		}
 	}
 
-	private void logArguments(String name, String[] args) {
+	private void logArguments(String message, String[] args) {
 		if (getLog().isDebugEnabled()) {
-			String message = (args.length == 1) ? name + ": " : name + "s: ";
 			getLog().debug(Arrays.stream(args).collect(Collectors.joining(" ", message, "")));
 		}
+	}
+
+	private static class TestArtifactFilter extends AbstractArtifactFeatureFilter {
+
+		TestArtifactFilter() {
+			super("", Artifact.SCOPE_TEST);
+		}
+
+		@Override
+		protected String getArtifactFeature(Artifact artifact) {
+			return artifact.getScope();
+		}
+
+	}
+
+	/**
+	 * Isolated {@link ThreadGroup} to capture uncaught exceptions.
+	 */
+	class IsolatedThreadGroup extends ThreadGroup {
+
+		private final Object monitor = new Object();
+
+		private Throwable exception;
+
+		IsolatedThreadGroup(String name) {
+			super(name);
+		}
+
+		@Override
+		public void uncaughtException(Thread thread, Throwable ex) {
+			if (!(ex instanceof ThreadDeath)) {
+				synchronized (this.monitor) {
+					this.exception = (this.exception != null) ? this.exception : ex;
+				}
+				getLog().warn(ex);
+			}
+		}
+
+		void rethrowUncaughtException() throws MojoExecutionException {
+			synchronized (this.monitor) {
+				if (this.exception != null) {
+					throw new MojoExecutionException(
+							"An exception occurred while running. " + this.exception.getMessage(), this.exception);
+				}
+			}
+		}
+
+	}
+
+	/**
+	 * Runner used to launch the application.
+	 */
+	class LaunchRunner implements Runnable {
+
+		private final String startClassName;
+
+		private final String[] args;
+
+		LaunchRunner(String startClassName, String... args) {
+			this.startClassName = startClassName;
+			this.args = (args != null) ? args : new String[] {};
+		}
+
+		@Override
+		public void run() {
+			Thread thread = Thread.currentThread();
+			ClassLoader classLoader = thread.getContextClassLoader();
+			try {
+				Class<?> startClass = classLoader.loadClass(this.startClassName);
+				Method mainMethod = startClass.getMethod("main", String[].class);
+				if (!mainMethod.isAccessible()) {
+					mainMethod.setAccessible(true);
+				}
+				mainMethod.invoke(null, new Object[] { this.args });
+			}
+			catch (NoSuchMethodException ex) {
+				Exception wrappedEx = new Exception(
+						"The specified mainClass doesn't contain a main method with appropriate signature.", ex);
+				thread.getThreadGroup().uncaughtException(thread, wrappedEx);
+			}
+			catch (Exception ex) {
+				thread.getThreadGroup().uncaughtException(thread, ex);
+			}
+		}
+
 	}
 
 	/**
@@ -462,24 +588,6 @@ public abstract class AbstractRunMojo extends AbstractDependencyFilterMojo {
 				return String.format("-D%s", key);
 			}
 			return String.format("-D%s=\"%s\"", key, value);
-		}
-
-	}
-
-	record ArgFile(Path path) {
-
-		private void write(CharSequence content) throws IOException {
-			Files.writeString(this.path, "\"" + escape(content) + "\"");
-		}
-
-		private String escape(CharSequence content) {
-			return content.toString().replace("\\", "\\\\");
-		}
-
-		static ArgFile create(CharSequence content) throws IOException {
-			ArgFile argFile = new ArgFile(Files.createTempFile("spring-boot-", ".argfile"));
-			argFile.write(content);
-			return argFile;
 		}
 
 	}

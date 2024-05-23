@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.boot.actuate.metrics.export.prometheus;
 
+import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -30,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 /**
  * Class that can be used to manage the pushing of metrics to a {@link PushGateway
@@ -56,7 +58,7 @@ public class PrometheusPushGatewayManager {
 
 	private final TaskScheduler scheduler;
 
-	private final ScheduledFuture<?> scheduled;
+	private ScheduledFuture<?> scheduled;
 
 	/**
 	 * Create a new {@link PrometheusPushGatewayManager} instance using a single threaded
@@ -98,24 +100,23 @@ public class PrometheusPushGatewayManager {
 		this.groupingKey = groupingKey;
 		this.shutdownOperation = (shutdownOperation != null) ? shutdownOperation : ShutdownOperation.NONE;
 		this.scheduler = scheduler;
-		this.scheduled = this.scheduler.scheduleAtFixedRate(this::post, pushRate);
+		this.scheduled = this.scheduler.scheduleAtFixedRate(this::push, pushRate);
 	}
 
-	private void post() {
+	private void push() {
 		try {
 			this.pushGateway.pushAdd(this.registry, this.job, this.groupingKey);
 		}
-		catch (Throwable ex) {
-			logger.warn("Unexpected exception thrown by POST of metrics to Prometheus Pushgateway", ex);
+		catch (UnknownHostException ex) {
+			String host = ex.getMessage();
+			String message = "Unable to locate prometheus push gateway host"
+					+ (StringUtils.hasLength(host) ? " '" + host + "'" : "")
+					+ ". No longer attempting metrics publication to this host";
+			logger.error(message, ex);
+			shutdown(ShutdownOperation.NONE);
 		}
-	}
-
-	private void put() {
-		try {
-			this.pushGateway.push(this.registry, this.job, this.groupingKey);
-		}
 		catch (Throwable ex) {
-			logger.warn("Unexpected exception thrown by PUT of metrics to Prometheus Pushgateway", ex);
+			logger.error("Unable to push metrics to Prometheus Pushgateway", ex);
 		}
 	}
 
@@ -124,7 +125,7 @@ public class PrometheusPushGatewayManager {
 			this.pushGateway.delete(this.job, this.groupingKey);
 		}
 		catch (Throwable ex) {
-			logger.warn("Unexpected exception thrown by DELETE of metrics from Prometheus Pushgateway", ex);
+			logger.error("Unable to delete metrics from Prometheus Pushgateway", ex);
 		}
 	}
 
@@ -136,14 +137,17 @@ public class PrometheusPushGatewayManager {
 	}
 
 	private void shutdown(ShutdownOperation shutdownOperation) {
-		if (this.scheduler instanceof PushGatewayTaskScheduler pushGatewayTaskScheduler) {
-			pushGatewayTaskScheduler.shutdown();
+		if (this.scheduler instanceof PushGatewayTaskScheduler) {
+			((PushGatewayTaskScheduler) this.scheduler).shutdown();
 		}
 		this.scheduled.cancel(false);
 		switch (shutdownOperation) {
-			case POST -> post();
-			case PUT -> put();
-			case DELETE -> delete();
+		case PUSH:
+			push();
+			break;
+		case DELETE:
+			delete();
+			break;
 		}
 	}
 
@@ -158,17 +162,12 @@ public class PrometheusPushGatewayManager {
 		NONE,
 
 		/**
-		 * Perform a POST before shutdown.
+		 * Perform a 'push' before shutdown.
 		 */
-		POST,
+		PUSH,
 
 		/**
-		 * Perform a PUT before shutdown.
-		 */
-		PUT,
-
-		/**
-		 * Perform a DELETE before shutdown.
+		 * Perform a 'delete' before shutdown.
 		 */
 		DELETE
 

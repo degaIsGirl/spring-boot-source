@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- @Configuration -->
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+	<bean id="binaryTea" class="org.springframework.boot.ioc.demo.xml.BinaryTea" autowire="byType" scope="prototype">
+	</bean>
+
+	<!-- @Bean -->
+	<bean id="boss" class="org.springframework.boot.ioc.demo.xml.Boss"></bean>
+
+	<bean id="customer" class="org.springframework.boot.ioc.demo.xml.Customer"></bean>
+
+	<!-- @ComponentScan -->
+	<context:component-scan base-package="org.springframework.boot.ioc.demo.common.scans"></context:component-scan>
+
+	<!-- @Import -->
+	<import resource="classpath:/demo/xml/imports.xml"></import>
+</beans>

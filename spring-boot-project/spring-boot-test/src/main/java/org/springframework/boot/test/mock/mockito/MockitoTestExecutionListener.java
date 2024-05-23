@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,23 +33,15 @@ import org.springframework.util.ReflectionUtils;
 import org.springframework.util.ReflectionUtils.FieldCallback;
 
 /**
- * {@link TestExecutionListener} to enable {@link MockBean @MockBean} and
- * {@link SpyBean @SpyBean} support. Also triggers
- * {@link MockitoAnnotations#openMocks(Object)} when any Mockito annotations used,
- * primarily to allow {@link Captor @Captor} annotations.
- * <p>
- * To use the automatic reset support of {@code @MockBean} and {@code @SpyBean}, configure
- * {@link ResetMocksTestExecutionListener} as well.
+ * {@link TestExecutionListener} to trigger {@link MockitoAnnotations#initMocks(Object)}
+ * when {@link MockBean @MockBean} annotations are used. Primarily to allow
+ * {@link Captor @Captor} annotations.
  *
  * @author Phillip Webb
  * @author Andy Wilkinson
- * @author Moritz Halbritter
  * @since 1.4.2
- * @see ResetMocksTestExecutionListener
  */
 public class MockitoTestExecutionListener extends AbstractTestExecutionListener {
-
-	private static final String MOCKS_ATTRIBUTE_NAME = MockitoTestExecutionListener.class.getName() + ".mocks";
 
 	@Override
 	public final int getOrder() {
@@ -58,7 +50,6 @@ public class MockitoTestExecutionListener extends AbstractTestExecutionListener 
 
 	@Override
 	public void prepareTestInstance(TestContext testContext) throws Exception {
-		closeMocks(testContext);
 		initMocks(testContext);
 		injectFields(testContext);
 	}
@@ -67,32 +58,14 @@ public class MockitoTestExecutionListener extends AbstractTestExecutionListener 
 	public void beforeTestMethod(TestContext testContext) throws Exception {
 		if (Boolean.TRUE.equals(
 				testContext.getAttribute(DependencyInjectionTestExecutionListener.REINJECT_DEPENDENCIES_ATTRIBUTE))) {
-			closeMocks(testContext);
 			initMocks(testContext);
 			reinjectFields(testContext);
 		}
 	}
 
-	@Override
-	public void afterTestMethod(TestContext testContext) throws Exception {
-		closeMocks(testContext);
-	}
-
-	@Override
-	public void afterTestClass(TestContext testContext) throws Exception {
-		closeMocks(testContext);
-	}
-
 	private void initMocks(TestContext testContext) {
 		if (hasMockitoAnnotations(testContext)) {
-			testContext.setAttribute(MOCKS_ATTRIBUTE_NAME, MockitoAnnotations.openMocks(testContext.getTestInstance()));
-		}
-	}
-
-	private void closeMocks(TestContext testContext) throws Exception {
-		Object mocks = testContext.getAttribute(MOCKS_ATTRIBUTE_NAME);
-		if (mocks instanceof AutoCloseable closeable) {
-			closeable.close();
+			MockitoAnnotations.initMocks(testContext.getTestInstance());
 		}
 	}
 
@@ -120,7 +93,7 @@ public class MockitoTestExecutionListener extends AbstractTestExecutionListener 
 		parser.parse(testContext.getTestClass());
 		if (!parser.getDefinitions().isEmpty()) {
 			MockitoPostProcessor postProcessor = testContext.getApplicationContext()
-				.getBean(MockitoPostProcessor.class);
+					.getBean(MockitoPostProcessor.class);
 			for (Definition definition : parser.getDefinitions()) {
 				Field field = parser.getField(definition);
 				if (field != null) {
@@ -133,12 +106,12 @@ public class MockitoTestExecutionListener extends AbstractTestExecutionListener 
 	/**
 	 * {@link FieldCallback} to collect Mockito annotations.
 	 */
-	private static final class MockitoAnnotationCollection implements FieldCallback {
+	private static class MockitoAnnotationCollection implements FieldCallback {
 
 		private final Set<Annotation> annotations = new LinkedHashSet<>();
 
 		@Override
-		public void doWith(Field field) throws IllegalArgumentException {
+		public void doWith(Field field) throws IllegalArgumentException, IllegalAccessException {
 			for (Annotation annotation : field.getDeclaredAnnotations()) {
 				if (annotation.annotationType().getName().startsWith("org.mockito")) {
 					this.annotations.add(annotation);

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="FrameworkDetectionExcludesConfiguration">
+    <file type="web" url="file://$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-jetty-jsp" />
+    <file type="web" url="file://$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-jta-jndi" />
+    <file type="web" url="file://$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-servlet" />
+    <file type="web" url="file://$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-tomcat-jsp" />
+    <file type="web" url="file://$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-traditional" />
+    <file type="web" url="file://$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-war" />
+    <file type="web" url="file://$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-web-jsp" />
+    <file type="web" url="file://$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-web-static" />
+  </component>
+  <component name="MavenProjectsManager">
+    <option name="originalFiles">
+      <list>
+        <option value="$PROJECT_DIR$/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/pom.xml" />
+      </list>
+    </option>
+    <option name="ignoredFiles">
+      <set>
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-activemq/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-actuator-custom-security/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-actuator-log4j2/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-actuator-noweb/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-actuator-ui/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-actuator/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-amqp/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-animated-banner/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-ant/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-aop/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-atmosphere/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-batch/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-cache/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-custom-layout/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-data-cassandra/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-data-couchbase/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-data-elasticsearch/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-data-jdbc/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-data-jpa/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-data-ldap/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-data-mongodb/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-data-neo4j/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-data-redis/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-data-rest/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-data-solr/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-devtools/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-flyway/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-hateoas/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-hibernate52/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-integration/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-jersey/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-jetty-jsp/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-jetty-ssl/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-jetty/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-jooq/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-jpa/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-jta-atomikos/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-jta-bitronix/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-jta-jndi/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-junit-jupiter/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-junit-vintage/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-kafka/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-liquibase/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-logback/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-oauth2-client/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-oauth2-resource-server/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-parent-context/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-profile/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-property-validation/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-quartz/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-reactive-oauth2-client/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-reactive-oauth2-resource-server/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-rsocket/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-saml2-service-provider/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-secure-jersey/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-secure-webflux/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-secure/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-servlet/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-session-webflux/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-session/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-simple/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-test-nomockito/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-test/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-testng/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-tomcat-jsp/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-tomcat-multi-connectors/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-tomcat-ssl/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-tomcat/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-traditional/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-undertow-ssl/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-undertow/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-war/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-web-freemarker/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-web-groovy-templates/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-web-jsp/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-web-method-security/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-web-mustache/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-web-secure-custom/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-web-secure-jdbc/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-web-secure/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-web-static/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-web-ui/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-webflux-coroutines/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-webflux/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-webservices/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-websocket-jetty/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-websocket-tomcat/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-websocket-undertow/pom.xml" />
+        <option value="$PROJECT_DIR$/spring-boot-tests/spring-boot-smoke-tests/spring-boot-smoke-test-xml/pom.xml" />
+      </set>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" default="true" project-jdk-name="11" project-jdk-type="JavaSDK" />
+</project>

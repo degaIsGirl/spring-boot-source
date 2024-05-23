@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Set;
@@ -50,7 +51,8 @@ public class ApplicationPid {
 
 	private String getPid() {
 		try {
-			return Long.toString(ProcessHandle.current().pid());
+			String jvmName = ManagementFactory.getRuntimeMXBean().getName();
+			return jvmName.split("@")[0];
 		}
 		catch (Throwable ex) {
 			return null;
@@ -62,8 +64,8 @@ public class ApplicationPid {
 		if (obj == this) {
 			return true;
 		}
-		if (obj instanceof ApplicationPid other) {
-			return ObjectUtils.nullSafeEquals(this.pid, other.pid);
+		if (obj instanceof ApplicationPid) {
+			return ObjectUtils.nullSafeEquals(this.pid, ((ApplicationPid) obj).pid);
 		}
 		return false;
 	}
@@ -86,7 +88,7 @@ public class ApplicationPid {
 	 */
 	public void write(File file) throws IOException {
 		Assert.state(this.pid != null, "No PID available");
-		createParentDirectory(file);
+		createParentFolder(file);
 		if (file.exists()) {
 			assertCanOverwrite(file);
 		}
@@ -95,7 +97,7 @@ public class ApplicationPid {
 		}
 	}
 
-	private void createParentDirectory(File file) {
+	private void createParentFolder(File file) {
 		File parent = file.getParentFile();
 		if (parent != null) {
 			parent.mkdirs();
@@ -104,7 +106,7 @@ public class ApplicationPid {
 
 	private void assertCanOverwrite(File file) throws IOException {
 		if (!file.canWrite() || !canWritePosixFile(file)) {
-			throw new FileNotFoundException(file + " (permission denied)");
+			throw new FileNotFoundException(file.toString() + " (permission denied)");
 		}
 	}
 

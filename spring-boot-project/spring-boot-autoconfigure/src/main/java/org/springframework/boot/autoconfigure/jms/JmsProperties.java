@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.springframework.boot.autoconfigure.jms;
 import java.time.Duration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.DeprecatedConfigurationProperty;
 
 /**
  * Configuration properties for JMS.
@@ -27,8 +26,6 @@ import org.springframework.boot.context.properties.DeprecatedConfigurationProper
  * @author Greg Turnquist
  * @author Phillip Webb
  * @author Stephane Nicoll
- * @author Lasse Wulff
- * @author Vedran Pavic
  * @since 1.0.0
  */
 @ConfigurationProperties(prefix = "spring.jms")
@@ -45,16 +42,6 @@ public class JmsProperties {
 	 */
 	private String jndiName;
 
-	/**
-	 * Whether the subscription is durable.
-	 */
-	private boolean subscriptionDurable = false;
-
-	/**
-	 * Client id of the connection.
-	 */
-	private String clientId;
-
 	private final Cache cache = new Cache();
 
 	private final Listener listener = new Listener();
@@ -67,22 +54,6 @@ public class JmsProperties {
 
 	public void setPubSubDomain(boolean pubSubDomain) {
 		this.pubSubDomain = pubSubDomain;
-	}
-
-	public boolean isSubscriptionDurable() {
-		return this.subscriptionDurable;
-	}
-
-	public void setSubscriptionDurable(boolean subscriptionDurable) {
-		this.subscriptionDurable = subscriptionDurable;
-	}
-
-	public String getClientId() {
-		return this.clientId;
-	}
-
-	public void setClientId(String clientId) {
-		this.clientId = clientId;
 	}
 
 	public String getJndiName() {
@@ -169,10 +140,15 @@ public class JmsProperties {
 		private boolean autoStartup = true;
 
 		/**
-		 * Minimum number of concurrent consumers. When max-concurrency is not specified
-		 * the minimum will also be used as the maximum.
+		 * Acknowledge mode of the container. By default, the listener is transacted with
+		 * automatic acknowledgment.
 		 */
-		private Integer minConcurrency;
+		private AcknowledgeMode acknowledgeMode;
+
+		/**
+		 * Minimum number of concurrent consumers.
+		 */
+		private Integer concurrency;
 
 		/**
 		 * Maximum number of concurrent consumers.
@@ -186,8 +162,6 @@ public class JmsProperties {
 		 */
 		private Duration receiveTimeout = Duration.ofSeconds(1);
 
-		private final Session session = new Session();
-
 		public boolean isAutoStartup() {
 			return this.autoStartup;
 		}
@@ -196,34 +170,20 @@ public class JmsProperties {
 			this.autoStartup = autoStartup;
 		}
 
-		@Deprecated(since = "3.2.0", forRemoval = true)
-		@DeprecatedConfigurationProperty(replacement = "spring.jms.listener.session.acknowledge-mode", since = "3.2.0")
 		public AcknowledgeMode getAcknowledgeMode() {
-			return this.session.getAcknowledgeMode();
+			return this.acknowledgeMode;
 		}
 
-		@Deprecated(since = "3.2.0", forRemoval = true)
 		public void setAcknowledgeMode(AcknowledgeMode acknowledgeMode) {
-			this.session.setAcknowledgeMode(acknowledgeMode);
+			this.acknowledgeMode = acknowledgeMode;
 		}
 
-		@DeprecatedConfigurationProperty(replacement = "spring.jms.listener.min-concurrency", since = "3.2.0")
-		@Deprecated(since = "3.2.0", forRemoval = true)
 		public Integer getConcurrency() {
-			return this.minConcurrency;
+			return this.concurrency;
 		}
 
-		@Deprecated(since = "3.2.0", forRemoval = true)
 		public void setConcurrency(Integer concurrency) {
-			this.minConcurrency = concurrency;
-		}
-
-		public Integer getMinConcurrency() {
-			return this.minConcurrency;
-		}
-
-		public void setMinConcurrency(Integer minConcurrency) {
-			this.minConcurrency = minConcurrency;
+			this.concurrency = concurrency;
 		}
 
 		public Integer getMaxConcurrency() {
@@ -235,11 +195,11 @@ public class JmsProperties {
 		}
 
 		public String formatConcurrency() {
-			if (this.minConcurrency == null) {
+			if (this.concurrency == null) {
 				return (this.maxConcurrency != null) ? "1-" + this.maxConcurrency : null;
 			}
-			return this.minConcurrency + "-"
-					+ ((this.maxConcurrency != null) ? this.maxConcurrency : this.minConcurrency);
+			return ((this.maxConcurrency != null) ? this.concurrency + "-" + this.maxConcurrency
+					: String.valueOf(this.concurrency));
 		}
 
 		public Duration getReceiveTimeout() {
@@ -248,41 +208,6 @@ public class JmsProperties {
 
 		public void setReceiveTimeout(Duration receiveTimeout) {
 			this.receiveTimeout = receiveTimeout;
-		}
-
-		public Session getSession() {
-			return this.session;
-		}
-
-		public static class Session {
-
-			/**
-			 * Acknowledge mode of the listener container.
-			 */
-			private AcknowledgeMode acknowledgeMode = AcknowledgeMode.AUTO;
-
-			/**
-			 * Whether the listener container should use transacted JMS sessions. Defaults
-			 * to false in the presence of a JtaTransactionManager and true otherwise.
-			 */
-			private Boolean transacted;
-
-			public AcknowledgeMode getAcknowledgeMode() {
-				return this.acknowledgeMode;
-			}
-
-			public void setAcknowledgeMode(AcknowledgeMode acknowledgeMode) {
-				this.acknowledgeMode = acknowledgeMode;
-			}
-
-			public Boolean getTransacted() {
-				return this.transacted;
-			}
-
-			public void setTransacted(Boolean transacted) {
-				this.transacted = transacted;
-			}
-
 		}
 
 	}
@@ -328,8 +253,6 @@ public class JmsProperties {
 		 * Timeout to use for receive calls.
 		 */
 		private Duration receiveTimeout;
-
-		private final Session session = new Session();
 
 		public String getDefaultDestination() {
 			return this.defaultDestination;
@@ -394,38 +317,45 @@ public class JmsProperties {
 			this.receiveTimeout = receiveTimeout;
 		}
 
-		public Session getSession() {
-			return this.session;
+	}
+
+	/**
+	 * Translate the acknowledge modes defined on the {@link javax.jms.Session}.
+	 *
+	 * <p>
+	 * {@link javax.jms.Session#SESSION_TRANSACTED} is not defined as we take care of this
+	 * already via a call to {@code setSessionTransacted}.
+	 */
+	public enum AcknowledgeMode {
+
+		/**
+		 * Messages sent or received from the session are automatically acknowledged. This
+		 * is the simplest mode and enables once-only message delivery guarantee.
+		 */
+		AUTO(1),
+
+		/**
+		 * Messages are acknowledged once the message listener implementation has called
+		 * {@link javax.jms.Message#acknowledge()}. This mode gives the application
+		 * (rather than the JMS provider) complete control over message acknowledgement.
+		 */
+		CLIENT(2),
+
+		/**
+		 * Similar to auto acknowledgment except that said acknowledgment is lazy. As a
+		 * consequence, the messages might be delivered more than once. This mode enables
+		 * at-least-once message delivery guarantee.
+		 */
+		DUPS_OK(3);
+
+		private final int mode;
+
+		AcknowledgeMode(int mode) {
+			this.mode = mode;
 		}
 
-		public static class Session {
-
-			/**
-			 * Acknowledge mode used when creating sessions.
-			 */
-			private AcknowledgeMode acknowledgeMode = AcknowledgeMode.AUTO;
-
-			/**
-			 * Whether to use transacted sessions.
-			 */
-			private boolean transacted = false;
-
-			public AcknowledgeMode getAcknowledgeMode() {
-				return this.acknowledgeMode;
-			}
-
-			public void setAcknowledgeMode(AcknowledgeMode acknowledgeMode) {
-				this.acknowledgeMode = acknowledgeMode;
-			}
-
-			public boolean isTransacted() {
-				return this.transacted;
-			}
-
-			public void setTransacted(boolean transacted) {
-				this.transacted = transacted;
-			}
-
+		public int getMode() {
+			return this.mode;
 		}
 
 	}

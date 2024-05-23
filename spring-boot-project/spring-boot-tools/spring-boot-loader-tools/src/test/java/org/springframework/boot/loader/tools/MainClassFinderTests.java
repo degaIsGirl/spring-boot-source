@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.springframework.boot.loader.tools;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.jar.JarFile;
@@ -44,7 +45,7 @@ class MainClassFinderTests {
 	private TestJarFile testJarFile;
 
 	@BeforeEach
-	void setup(@TempDir File tempDir) {
+	void setup(@TempDir File tempDir) throws IOException {
 		this.testJarFile = new TestJarFile(tempDir);
 	}
 
@@ -59,7 +60,7 @@ class MainClassFinderTests {
 	}
 
 	@Test
-	void findMainClassInJarSubDirectory() throws Exception {
+	void findMainClassInJarSubFolder() throws Exception {
 		this.testJarFile.addClass("a/b/c/D.class", ClassWithMainMethod.class);
 		this.testJarFile.addClass("a/b/c/E.class", ClassWithoutMainMethod.class);
 		this.testJarFile.addClass("a/b/F.class", ClassWithoutMainMethod.class);
@@ -85,8 +86,8 @@ class MainClassFinderTests {
 		this.testJarFile.addClass("a/b/c/E.class", ClassWithMainMethod.class);
 		try (JarFile jarFile = this.testJarFile.getJarFile()) {
 			assertThatIllegalStateException().isThrownBy(() -> MainClassFinder.findSingleMainClass(jarFile, ""))
-				.withMessageContaining(
-						"Unable to find a single main class from the following candidates [a.B, a.b.c.E]");
+					.withMessageContaining(
+							"Unable to find a single main class from the following candidates [a.B, a.b.c.E]");
 		}
 	}
 
@@ -113,7 +114,7 @@ class MainClassFinderTests {
 	}
 
 	@Test
-	void findMainClassInDirectory() throws Exception {
+	void findMainClassInFolder() throws Exception {
 		this.testJarFile.addClass("B.class", ClassWithMainMethod.class);
 		this.testJarFile.addClass("A.class", ClassWithoutMainMethod.class);
 		String actual = MainClassFinder.findMainClass(this.testJarFile.getJarSource());
@@ -121,7 +122,7 @@ class MainClassFinderTests {
 	}
 
 	@Test
-	void findMainClassInSubDirectory() throws Exception {
+	void findMainClassInSubFolder() throws Exception {
 		this.testJarFile.addClass("a/b/c/D.class", ClassWithMainMethod.class);
 		this.testJarFile.addClass("a/b/c/E.class", ClassWithoutMainMethod.class);
 		this.testJarFile.addClass("a/b/F.class", ClassWithoutMainMethod.class);
@@ -130,7 +131,7 @@ class MainClassFinderTests {
 	}
 
 	@Test
-	void usesBreadthFirstDirectorySearch() throws Exception {
+	void usesBreadthFirstFolderSearch() throws Exception {
 		this.testJarFile.addClass("a/B.class", ClassWithMainMethod.class);
 		this.testJarFile.addClass("a/b/c/E.class", ClassWithMainMethod.class);
 		String actual = MainClassFinder.findMainClass(this.testJarFile.getJarSource());
@@ -138,16 +139,17 @@ class MainClassFinderTests {
 	}
 
 	@Test
-	void findSingleDirectorySearch() throws Exception {
+	void findSingleFolderSearch() throws Exception {
 		this.testJarFile.addClass("a/B.class", ClassWithMainMethod.class);
 		this.testJarFile.addClass("a/b/c/E.class", ClassWithMainMethod.class);
 		assertThatIllegalStateException()
-			.isThrownBy(() -> MainClassFinder.findSingleMainClass(this.testJarFile.getJarSource()))
-			.withMessageContaining("Unable to find a single main class from the following candidates [a.B, a.b.c.E]");
+				.isThrownBy(() -> MainClassFinder.findSingleMainClass(this.testJarFile.getJarSource()))
+				.withMessageContaining(
+						"Unable to find a single main class from the following candidates [a.B, a.b.c.E]");
 	}
 
 	@Test
-	void findSingleDirectorySearchPrefersAnnotatedMainClass() throws Exception {
+	void findSingleFolderSearchPrefersAnnotatedMainClass() throws Exception {
 		this.testJarFile.addClass("a/B.class", ClassWithMainMethod.class);
 		this.testJarFile.addClass("a/b/c/E.class", AnnotatedClassWithMainMethod.class);
 		String mainClass = MainClassFinder.findSingleMainClass(this.testJarFile.getJarSource(),
@@ -156,14 +158,14 @@ class MainClassFinderTests {
 	}
 
 	@Test
-	void doWithDirectoryMainMethods() throws Exception {
+	void doWithFolderMainMethods() throws Exception {
 		this.testJarFile.addClass("a/b/c/D.class", ClassWithMainMethod.class);
 		this.testJarFile.addClass("a/b/c/E.class", ClassWithoutMainMethod.class);
 		this.testJarFile.addClass("a/b/F.class", ClassWithoutMainMethod.class);
 		this.testJarFile.addClass("a/b/G.class", ClassWithMainMethod.class);
 		ClassNameCollector callback = new ClassNameCollector();
 		MainClassFinder.doWithMainClasses(this.testJarFile.getJarSource(), callback);
-		assertThat(callback.getClassNames()).hasToString("[a.b.G, a.b.c.D]");
+		assertThat(callback.getClassNames().toString()).isEqualTo("[a.b.G, a.b.c.D]");
 	}
 
 	@Test
@@ -175,7 +177,7 @@ class MainClassFinderTests {
 		ClassNameCollector callback = new ClassNameCollector();
 		try (JarFile jarFile = this.testJarFile.getJarFile()) {
 			MainClassFinder.doWithMainClasses(jarFile, null, callback);
-			assertThat(callback.getClassNames()).hasToString("[a.b.G, a.b.c.D]");
+			assertThat(callback.getClassNames().toString()).isEqualTo("[a.b.G, a.b.c.D]");
 		}
 	}
 

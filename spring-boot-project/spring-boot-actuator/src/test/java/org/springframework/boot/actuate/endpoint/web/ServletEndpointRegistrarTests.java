@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,28 +18,30 @@ package org.springframework.boot.actuate.endpoint.web;
 
 import java.util.Collections;
 
-import jakarta.servlet.GenericServlet;
-import jakarta.servlet.Servlet;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRegistration.Dynamic;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
+import javax.servlet.GenericServlet;
+import javax.servlet.Servlet;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRegistration.Dynamic;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
 import org.springframework.boot.actuate.endpoint.EndpointId;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.assertArg;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 /**
  * Tests for {@link ServletEndpointRegistrar}.
@@ -47,8 +49,6 @@ import static org.mockito.Mockito.mock;
  * @author Phillip Webb
  * @author Stephane Nicoll
  */
-@ExtendWith(MockitoExtension.class)
-@SuppressWarnings("removal")
 class ServletEndpointRegistrarTests {
 
 	@Mock
@@ -57,10 +57,19 @@ class ServletEndpointRegistrarTests {
 	@Mock
 	private Dynamic dynamic;
 
+	@Captor
+	private ArgumentCaptor<Servlet> servlet;
+
+	@BeforeEach
+	void setup() {
+		MockitoAnnotations.initMocks(this);
+		given(this.servletContext.addServlet(any(String.class), any(Servlet.class))).willReturn(this.dynamic);
+	}
+
 	@Test
 	void createWhenServletEndpointsIsNullShouldThrowException() {
 		assertThatIllegalArgumentException().isThrownBy(() -> new ServletEndpointRegistrar(null, null))
-			.withMessageContaining("ServletEndpoints must not be null");
+				.withMessageContaining("ServletEndpoints must not be null");
 	}
 
 	@Test
@@ -84,42 +93,37 @@ class ServletEndpointRegistrarTests {
 	}
 
 	private void assertBasePath(String basePath, String expectedMapping) throws ServletException {
-		given(this.servletContext.addServlet(any(String.class), any(Servlet.class))).willReturn(this.dynamic);
 		ExposableServletEndpoint endpoint = mockEndpoint(new EndpointServlet(TestServlet.class));
 		ServletEndpointRegistrar registrar = new ServletEndpointRegistrar(basePath, Collections.singleton(endpoint));
 		registrar.onStartup(this.servletContext);
-		then(this.servletContext).should()
-			.addServlet(eq("test-actuator-endpoint"),
-					(Servlet) assertArg((servlet) -> assertThat(servlet).isInstanceOf(TestServlet.class)));
-		then(this.dynamic).should().addMapping(expectedMapping);
+		verify(this.servletContext).addServlet(eq("test-actuator-endpoint"), this.servlet.capture());
+		assertThat(this.servlet.getValue()).isInstanceOf(TestServlet.class);
+		verify(this.dynamic).addMapping(expectedMapping);
 	}
 
 	@Test
 	void onStartupWhenHasInitParametersShouldRegisterInitParameters() throws Exception {
-		given(this.servletContext.addServlet(any(String.class), any(Servlet.class))).willReturn(this.dynamic);
 		ExposableServletEndpoint endpoint = mockEndpoint(
 				new EndpointServlet(TestServlet.class).withInitParameter("a", "b"));
 		ServletEndpointRegistrar registrar = new ServletEndpointRegistrar("/actuator", Collections.singleton(endpoint));
 		registrar.onStartup(this.servletContext);
-		then(this.dynamic).should().setInitParameters(Collections.singletonMap("a", "b"));
+		verify(this.dynamic).setInitParameters(Collections.singletonMap("a", "b"));
 	}
 
 	@Test
 	void onStartupWhenHasLoadOnStartupShouldRegisterLoadOnStartup() throws Exception {
-		given(this.servletContext.addServlet(any(String.class), any(Servlet.class))).willReturn(this.dynamic);
 		ExposableServletEndpoint endpoint = mockEndpoint(new EndpointServlet(TestServlet.class).withLoadOnStartup(7));
 		ServletEndpointRegistrar registrar = new ServletEndpointRegistrar("/actuator", Collections.singleton(endpoint));
 		registrar.onStartup(this.servletContext);
-		then(this.dynamic).should().setLoadOnStartup(7);
+		verify(this.dynamic).setLoadOnStartup(7);
 	}
 
 	@Test
 	void onStartupWhenHasNotLoadOnStartupShouldRegisterDefaultValue() throws Exception {
-		given(this.servletContext.addServlet(any(String.class), any(Servlet.class))).willReturn(this.dynamic);
 		ExposableServletEndpoint endpoint = mockEndpoint(new EndpointServlet(TestServlet.class));
 		ServletEndpointRegistrar registrar = new ServletEndpointRegistrar("/actuator", Collections.singleton(endpoint));
 		registrar.onStartup(this.servletContext);
-		then(this.dynamic).should().setLoadOnStartup(-1);
+		verify(this.dynamic).setLoadOnStartup(-1);
 	}
 
 	private ExposableServletEndpoint mockEndpoint(EndpointServlet endpointServlet) {

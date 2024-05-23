@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,6 @@ import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
 
-import org.springframework.boot.actuate.autoconfigure.metrics.export.properties.AbstractPropertiesConfigAdapterTests;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -29,12 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Andy Wilkinson
  */
-class HumioPropertiesConfigAdapterTests
-		extends AbstractPropertiesConfigAdapterTests<HumioProperties, HumioPropertiesConfigAdapter> {
-
-	HumioPropertiesConfigAdapterTests() {
-		super(HumioPropertiesConfigAdapter.class);
-	}
+class HumioPropertiesConfigAdapterTests {
 
 	@Test
 	void whenApiTokenIsSetAdapterApiTokenReturnsIt() {
@@ -44,11 +37,19 @@ class HumioPropertiesConfigAdapterTests
 	}
 
 	@Test
+	@Deprecated
+	void whenPropertiesRepositoryIsSetAdapterRepositoryReturnsIt() {
+		HumioProperties properties = new HumioProperties();
+		properties.setRepository("test");
+		assertThat(new HumioPropertiesConfigAdapter(properties).repository()).isEqualTo("test");
+	}
+
+	@Test
 	void whenPropertiesTagsIsSetAdapterTagsReturnsIt() {
 		HumioProperties properties = new HumioProperties();
 		properties.setTags(Collections.singletonMap("name", "test"));
 		assertThat(new HumioPropertiesConfigAdapter(properties).tags())
-			.isEqualTo(Collections.singletonMap("name", "test"));
+				.isEqualTo(Collections.singletonMap("name", "test"));
 	}
 
 	@Test

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2021 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 package org.springframework.boot.web.servlet;
 
-import jakarta.servlet.ServletContainerInitializer;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
+import javax.servlet.ServletContainerInitializer;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
 
 import org.springframework.web.SpringServletContainerInitializer;
 import org.springframework.web.WebApplicationInitializer;
@@ -31,7 +31,7 @@ import org.springframework.web.WebApplicationInitializer;
  * automatically bootstrapped by the Servlet container.
  * <p>
  * This interface is designed to act in a similar way to
- * {@link ServletContainerInitializer}, but have a lifecycle that's managed by Spring and
+ * {@link ServletContainerInitializer}, but have a ioc that's managed by Spring and
  * not the Servlet container.
  * <p>
  * For configuration examples see {@link WebApplicationInitializer}.

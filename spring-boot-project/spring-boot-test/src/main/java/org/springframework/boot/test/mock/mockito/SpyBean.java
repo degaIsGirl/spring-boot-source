@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,9 +37,9 @@ import org.springframework.test.context.junit4.SpringRunner;
  * {@link RunWith @RunWith} the {@link SpringRunner}.
  * <p>
  * Spies can be applied by type or by {@link #name() bean name}. All beans in the context
- * of a matching type (including subclasses) will be wrapped with the spy. If no existing
- * bean is defined a new one will be added. Dependencies that are known to the application
- * context but are not beans (such as those
+ * of the same type will be wrapped with the spy. If no existing bean is defined a new one
+ * will be added. Dependencies that are known to the application context but are not beans
+ * (such as those
  * {@link org.springframework.beans.factory.config.ConfigurableListableBeanFactory#registerResolvableDependency(Class, Object)
  * registered directly}) will not be found and a spied bean will be added to the context
  * alongside the existing dependency.
@@ -51,7 +51,7 @@ import org.springframework.test.context.junit4.SpringRunner;
  * public class ExampleTests {
  *
  *     &#064;SpyBean
- *     private ExampleService service;
+ *     private ExampleService services;
  *
  *     &#064;Autowired
  *     private UserOfService userOfService;
@@ -60,7 +60,7 @@ import org.springframework.test.context.junit4.SpringRunner;
  *     public void testUserOfService() {
  *         String actual = this.userOfService.makeUse();
  *         assertEquals("Was: Hello", actual);
- *         verify(this.service).greet();
+ *         verify(this.services).greet();
  *     }
  *
  *     &#064;Configuration
@@ -77,7 +77,7 @@ import org.springframework.test.context.junit4.SpringRunner;
  *
  *     &#064;SpyBean
  *     &#064;Qualifier("example")
- *     private ExampleService service;
+ *     private ExampleService services;
  *
  *     ...
  * }

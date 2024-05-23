@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,32 +24,27 @@ import java.util.zip.InflaterInputStream;
 
 /**
  * {@link InflaterInputStream} that supports the writing of an extra "dummy" byte (which
- * is required when using an {@link Inflater} with {@code nowrap}) and returns accurate
- * available() results.
+ * is required with JDK 6) and returns accurate available() results.
  *
  * @author Phillip Webb
  */
-abstract class ZipInflaterInputStream extends InflaterInputStream {
+class ZipInflaterInputStream extends InflaterInputStream {
 
 	private int available;
 
 	private boolean extraBytesWritten;
 
-	ZipInflaterInputStream(InputStream inputStream, Inflater inflater, int size) {
-		super(inputStream, inflater, getInflaterBufferSize(size));
+	ZipInflaterInputStream(InputStream inputStream, int size) {
+		super(inputStream, new Inflater(true), getInflaterBufferSize(size));
 		this.available = size;
-	}
-
-	private static int getInflaterBufferSize(long size) {
-		size += 2; // inflater likes some space
-		size = (size > 65536) ? 8192 : size;
-		size = (size <= 0) ? 4096 : size;
-		return (int) size;
 	}
 
 	@Override
 	public int available() throws IOException {
-		return (this.available >= 0) ? this.available : super.available();
+		if (this.available < 0) {
+			return super.available();
+		}
+		return this.available;
 	}
 
 	@Override
@@ -59,6 +54,12 @@ abstract class ZipInflaterInputStream extends InflaterInputStream {
 			this.available -= result;
 		}
 		return result;
+	}
+
+	@Override
+	public void close() throws IOException {
+		super.close();
+		this.inf.end();
 	}
 
 	@Override
@@ -75,6 +76,13 @@ abstract class ZipInflaterInputStream extends InflaterInputStream {
 			this.extraBytesWritten = true;
 			this.inf.setInput(this.buf, 0, this.len);
 		}
+	}
+
+	private static int getInflaterBufferSize(long size) {
+		size += 2; // inflater likes some space
+		size = (size > 65536) ? 8192 : size;
+		size = (size <= 0) ? 4096 : size;
+		return (int) size;
 	}
 
 }

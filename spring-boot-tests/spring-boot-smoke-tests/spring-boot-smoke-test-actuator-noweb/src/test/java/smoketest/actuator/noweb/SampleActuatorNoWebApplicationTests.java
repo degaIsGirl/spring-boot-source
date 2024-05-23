@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 /**
- * Basic integration tests for service demo application.
+ * Basic integration tests for services demo application.
  *
  * @author Dave Syer
  */

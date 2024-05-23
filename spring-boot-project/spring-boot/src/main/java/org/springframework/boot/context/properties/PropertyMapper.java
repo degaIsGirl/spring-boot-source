@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.boot.context.properties;
 
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -26,7 +25,6 @@ import java.util.function.Supplier;
 
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
-import org.springframework.util.function.SingletonSupplier;
 
 /**
  * Utility that can be used to map values from a supplied source to a destination.
@@ -53,7 +51,6 @@ import org.springframework.util.function.SingletonSupplier;
  *
  * @author Phillip Webb
  * @author Artsiom Yudovin
- * @author Chris Bono
  * @since 2.0.0
  */
 public final class PropertyMapper {
@@ -128,7 +125,7 @@ public final class PropertyMapper {
 		if (this.parent != null) {
 			return this.parent.from(supplier);
 		}
-		return new Source<>(SingletonSupplier.of(supplier), (Predicate<T>) ALWAYS);
+		return new Source<>(new CachingSupplier<>(supplier), (Predicate<T>) ALWAYS);
 	}
 
 	/**
@@ -137,6 +134,32 @@ public final class PropertyMapper {
 	 */
 	public static PropertyMapper get() {
 		return INSTANCE;
+	}
+
+	/**
+	 * Supplier that caches the value to prevent multiple calls.
+	 */
+	private static class CachingSupplier<T> implements Supplier<T> {
+
+		private final Supplier<T> supplier;
+
+		private boolean hasResult;
+
+		private T result;
+
+		CachingSupplier(Supplier<T> supplier) {
+			this.supplier = supplier;
+		}
+
+		@Override
+		public T get() {
+			if (!this.hasResult) {
+				this.result = this.supplier.get();
+				this.hasResult = true;
+			}
+			return this.result;
+		}
+
 	}
 
 	/**
@@ -183,8 +206,7 @@ public final class PropertyMapper {
 		}
 
 		/**
-		 * Return an adapted version of the source changed through the given adapter
-		 * function.
+		 * Return an adapted version of the source changed via the given adapter function.
 		 * @param <R> the resulting type
 		 * @param adapter the adapter to apply
 		 * @return a new adapted source instance
@@ -283,7 +305,7 @@ public final class PropertyMapper {
 
 		/**
 		 * Complete the mapping by passing any non-filtered value to the specified
-		 * consumer. The method is designed to be used with mutable objects.
+		 * consumer.
 		 * @param consumer the consumer that should accept the value if it's not been
 		 * filtered
 		 */
@@ -293,24 +315,6 @@ public final class PropertyMapper {
 			if (this.predicate.test(value)) {
 				consumer.accept(value);
 			}
-		}
-
-		/**
-		 * Complete the mapping for any non-filtered value by applying the given function
-		 * to an existing instance and returning a new one. For filtered values, the
-		 * {@code instance} parameter is returned unchanged. The method is designed to be
-		 * used with immutable objects.
-		 * @param <R> the result type
-		 * @param instance the current instance
-		 * @param mapper the mapping function
-		 * @return a new mapped instance or the original instance
-		 * @since 3.0.0
-		 */
-		public <R> R to(R instance, BiFunction<R, T, R> mapper) {
-			Assert.notNull(instance, "Instance must not be null");
-			Assert.notNull(mapper, "Mapper must not be null");
-			T value = this.supplier.get();
-			return (!this.predicate.test(value)) ? instance : mapper.apply(instance, value);
 		}
 
 		/**

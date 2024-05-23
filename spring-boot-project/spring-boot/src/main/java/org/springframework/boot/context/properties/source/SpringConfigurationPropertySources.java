@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.function.Function;
 
-import org.springframework.boot.origin.OriginLookup;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertySource;
@@ -50,10 +49,6 @@ class SpringConfigurationPropertySources implements Iterable<ConfigurationProper
 		this.sources = sources;
 	}
 
-	boolean isUsingSources(Iterable<PropertySource<?>> sources) {
-		return this.sources == sources;
-	}
-
 	@Override
 	public Iterator<ConfigurationPropertySource> iterator() {
 		return new SourcesIterator(this.sources.iterator(), this::adapt);
@@ -67,9 +62,6 @@ class SpringConfigurationPropertySources implements Iterable<ConfigurationProper
 			return result;
 		}
 		result = SpringConfigurationPropertySource.from(source);
-		if (source instanceof OriginLookup<?> originLookup) {
-			result = result.withPrefix(originLookup.getPrefix());
-		}
 		this.cache.put(source, result);
 		return result;
 	}
@@ -114,8 +106,8 @@ class SpringConfigurationPropertySources implements Iterable<ConfigurationProper
 					return fetchNext();
 				}
 				PropertySource<?> candidate = this.iterators.peek().next();
-				if (candidate.getSource() instanceof ConfigurableEnvironment configurableEnvironment) {
-					push(configurableEnvironment);
+				if (candidate.getSource() instanceof ConfigurableEnvironment) {
+					push((ConfigurableEnvironment) candidate.getSource());
 					return fetchNext();
 				}
 				if (isIgnored(candidate)) {

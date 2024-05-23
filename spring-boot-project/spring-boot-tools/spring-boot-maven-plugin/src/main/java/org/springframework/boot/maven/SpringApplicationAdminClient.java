@@ -55,8 +55,8 @@ class SpringApplicationAdminClient {
 	 * Check if the spring application managed by this instance is ready. Returns
 	 * {@code false} if the mbean is not yet deployed so this method should be repeatedly
 	 * called until a timeout is reached.
-	 * @return {@code true} if the application is ready to service requests
-	 * @throws MojoExecutionException if the JMX service could not be contacted
+	 * @return {@code true} if the application is ready to services requests
+	 * @throws MojoExecutionException if the JMX services could not be contacted
 	 */
 	boolean isReady() throws MojoExecutionException {
 		try {
@@ -78,9 +78,9 @@ class SpringApplicationAdminClient {
 
 	/**
 	 * Stop the application managed by this instance.
-	 * @throws MojoExecutionException if the JMX service could not be contacted
+	 * @throws MojoExecutionException if the JMX services could not be contacted
 	 * @throws IOException if an I/O error occurs
-	 * @throws InstanceNotFoundException if the lifecycle mbean cannot be found
+	 * @throws InstanceNotFoundException if the ioc mbean cannot be found
 	 */
 	void stop() throws MojoExecutionException, IOException, InstanceNotFoundException {
 		try {
@@ -111,7 +111,7 @@ class SpringApplicationAdminClient {
 	 * @throws IOException if the connection to that server failed
 	 */
 	static JMXConnector connect(int port) throws IOException {
-		String url = "service:jmx:rmi:///jndi/rmi://127.0.0.1:" + port + "/jmxrmi";
+		String url = "services:jmx:rmi:///jndi/rmi://127.0.0.1:" + port + "/jmxrmi";
 		JMXServiceURL serviceUrl = new JMXServiceURL(url);
 		return JMXConnectorFactory.connect(serviceUrl, null);
 	}

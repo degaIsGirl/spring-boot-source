@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,8 @@ package org.springframework.boot.actuate.autoconfigure.cloudfoundry.servlet;
 
 import java.util.Locale;
 
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -77,7 +78,8 @@ class CloudFoundrySecurityInterceptor {
 		}
 		catch (Exception ex) {
 			logger.error(ex);
-			if (ex instanceof CloudFoundryAuthorizationException cfException) {
+			if (ex instanceof CloudFoundryAuthorizationException) {
+				CloudFoundryAuthorizationException cfException = (CloudFoundryAuthorizationException) ex;
 				return new SecurityResponse(cfException.getStatusCode(),
 						"{\"security_error\":\"" + cfException.getMessage() + "\"}");
 			}
@@ -86,7 +88,7 @@ class CloudFoundrySecurityInterceptor {
 		return SecurityResponse.success();
 	}
 
-	private void check(HttpServletRequest request, EndpointId endpointId) {
+	private void check(HttpServletRequest request, EndpointId endpointId) throws Exception {
 		Token token = getToken(request);
 		this.tokenValidator.validate(token);
 		AccessLevel accessLevel = this.cloudFoundrySecurityService.getAccessLevel(token.toString(), this.applicationId);

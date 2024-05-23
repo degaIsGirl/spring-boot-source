@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author Stephane Nicoll
  * @since 2.0.0
  */
-@ConfigurationProperties(prefix = "management.atlas.metrics.export")
+@ConfigurationProperties(prefix = "management.metrics.export.atlas")
 public class AtlasProperties {
 
 	/**
@@ -79,27 +79,12 @@ public class AtlasProperties {
 	private boolean lwcEnabled;
 
 	/**
-	 * Step size (reporting frequency) to use for streaming to Atlas LWC. This is the
-	 * highest supported resolution for getting an on-demand stream of the data. It must
-	 * be less than or equal to management.metrics.export.atlas.step and
-	 * management.metrics.export.atlas.step should be an even multiple of this value.
-	 */
-	private Duration lwcStep = Duration.ofSeconds(5);
-
-	/**
-	 * Whether expressions with the same step size as Atlas publishing should be ignored
-	 * for streaming. Used for cases where data being published to Atlas is also sent into
-	 * streaming from the backend.
-	 */
-	private boolean lwcIgnorePublishStep = true;
-
-	/**
-	 * Frequency for refreshing config settings from the LWC service.
+	 * Frequency for refreshing config settings from the LWC services.
 	 */
 	private Duration configRefreshFrequency = Duration.ofSeconds(10);
 
 	/**
-	 * Time to live for subscriptions from the LWC service.
+	 * Time to live for subscriptions from the LWC services.
 	 */
 	private Duration configTimeToLive = Duration.ofSeconds(150);
 
@@ -183,22 +168,6 @@ public class AtlasProperties {
 
 	public void setLwcEnabled(boolean lwcEnabled) {
 		this.lwcEnabled = lwcEnabled;
-	}
-
-	public Duration getLwcStep() {
-		return this.lwcStep;
-	}
-
-	public void setLwcStep(Duration lwcStep) {
-		this.lwcStep = lwcStep;
-	}
-
-	public boolean isLwcIgnorePublishStep() {
-		return this.lwcIgnorePublishStep;
-	}
-
-	public void setLwcIgnorePublishStep(boolean lwcIgnorePublishStep) {
-		this.lwcIgnorePublishStep = lwcIgnorePublishStep;
 	}
 
 	public Duration getConfigRefreshFrequency() {

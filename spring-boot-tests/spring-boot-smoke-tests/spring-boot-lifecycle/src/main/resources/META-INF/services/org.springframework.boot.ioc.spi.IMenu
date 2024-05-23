@@ -1,0 +1,2 @@
+org.springframework.boot.ioc.spi.ActivityMenu
+org.springframework.boot.ioc.spi.NormalMenu

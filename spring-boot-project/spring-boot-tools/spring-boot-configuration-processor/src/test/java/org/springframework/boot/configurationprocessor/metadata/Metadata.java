@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,7 +131,7 @@ public final class Metadata {
 
 		@Override
 		public boolean matches(ConfigurationMetadata value) {
-			ItemMetadata itemMetadata = findItem(value, this.name);
+			ItemMetadata itemMetadata = getFirstItemWithName(value, this.name);
 			if (itemMetadata == null) {
 				return false;
 			}
@@ -157,7 +157,10 @@ public final class Metadata {
 			if (this.deprecation == null && itemMetadata.getDeprecation() != null) {
 				return false;
 			}
-			return this.deprecation == null || this.deprecation.equals(itemMetadata.getDeprecation());
+			if (this.deprecation != null && !this.deprecation.equals(itemMetadata.getDeprecation())) {
+				return false;
+			}
+			return true;
 		}
 
 		public MetadataItemCondition ofType(Class<?> dataType) {
@@ -190,17 +193,13 @@ public final class Metadata {
 					this.description, defaultValue, this.deprecation);
 		}
 
-		public MetadataItemCondition withDeprecation() {
-			return withDeprecation(null, null, null, null);
+		public MetadataItemCondition withDeprecation(String reason, String replacement) {
+			return withDeprecation(reason, replacement, null);
 		}
 
-		public MetadataItemCondition withDeprecation(String reason, String replacement, String since) {
-			return withDeprecation(reason, replacement, since, null);
-		}
-
-		public MetadataItemCondition withDeprecation(String reason, String replacement, String since, String level) {
+		public MetadataItemCondition withDeprecation(String reason, String replacement, String level) {
 			return new MetadataItemCondition(this.itemType, this.name, this.type, this.sourceType, this.sourceMethod,
-					this.description, this.defaultValue, new ItemDeprecation(reason, replacement, since, level));
+					this.description, this.defaultValue, new ItemDeprecation(reason, replacement, level));
 		}
 
 		public MetadataItemCondition withNoDeprecation() {
@@ -208,15 +207,13 @@ public final class Metadata {
 					this.description, this.defaultValue, null);
 		}
 
-		private ItemMetadata findItem(ConfigurationMetadata metadata, String name) {
-			List<ItemMetadata> candidates = metadata.getItems()
-				.stream()
-				.filter((item) -> item.isOfItemType(this.itemType) && name.equals(item.getName()))
-				.toList();
-			if (candidates.size() > 1) {
-				throw new IllegalStateException("More than one metadata item with name '" + name + "': " + candidates);
+		private ItemMetadata getFirstItemWithName(ConfigurationMetadata metadata, String name) {
+			for (ItemMetadata item : metadata.getItems()) {
+				if (item.isOfItemType(this.itemType) && name.equals(item.getName())) {
+					return item;
+				}
 			}
-			return (candidates.size() == 1) ? candidates.get(0) : null;
+			return null;
 		}
 
 	}
@@ -345,7 +342,10 @@ public final class Metadata {
 			if (this.value != null && !this.value.equals(valueHint.getValue())) {
 				return false;
 			}
-			return this.description == null || this.description.equals(valueHint.getDescription());
+			if (this.description != null && !this.description.equals(valueHint.getDescription())) {
+				return false;
+			}
+			return true;
 		}
 
 	}
@@ -389,7 +389,7 @@ public final class Metadata {
 			if (this.parameters != null) {
 				for (Map.Entry<String, Object> entry : this.parameters.entrySet()) {
 					if (!IsMapContaining.hasEntry(entry.getKey(), entry.getValue())
-						.matches(valueProvider.getParameters())) {
+							.matches(valueProvider.getParameters())) {
 						return false;
 					}
 				}

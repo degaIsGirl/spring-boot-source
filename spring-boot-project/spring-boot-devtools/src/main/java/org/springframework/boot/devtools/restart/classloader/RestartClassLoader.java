@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,12 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.security.ProtectionDomain;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Enumeration;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.springframework.boot.devtools.restart.classloader.ClassLoaderFile.Kind;
 import org.springframework.core.SmartClassLoader;
@@ -36,6 +40,8 @@ import org.springframework.util.Assert;
  * @since 1.3.0
  */
 public class RestartClassLoader extends URLClassLoader implements SmartClassLoader {
+
+	private final Log logger;
 
 	private final ClassLoaderFileRepository updatedFiles;
 
@@ -56,10 +62,27 @@ public class RestartClassLoader extends URLClassLoader implements SmartClassLoad
 	 * @param urls the urls managed by the classloader
 	 */
 	public RestartClassLoader(ClassLoader parent, URL[] urls, ClassLoaderFileRepository updatedFiles) {
+		this(parent, urls, updatedFiles, LogFactory.getLog(RestartClassLoader.class));
+	}
+
+	/**
+	 * Create a new {@link RestartClassLoader} instance.
+	 * @param parent the parent classloader
+	 * @param updatedFiles any files that have been updated since the JARs referenced in
+	 * URLs were created.
+	 * @param urls the urls managed by the classloader
+	 * @param logger the logger used for messages
+	 */
+	public RestartClassLoader(ClassLoader parent, URL[] urls, ClassLoaderFileRepository updatedFiles, Log logger) {
 		super(urls, parent);
 		Assert.notNull(parent, "Parent must not be null");
 		Assert.notNull(updatedFiles, "UpdatedFiles must not be null");
+		Assert.notNull(logger, "Logger must not be null");
 		this.updatedFiles = updatedFiles;
+		this.logger = logger;
+		if (logger.isDebugEnabled()) {
+			logger.debug("Created RestartClassLoader " + toString());
+		}
 	}
 
 	@Override
@@ -101,7 +124,7 @@ public class RestartClassLoader extends URLClassLoader implements SmartClassLoad
 		if (file.getKind() == Kind.DELETED) {
 			return null;
 		}
-		return createFileUrl(name, file);
+		return AccessController.doPrivileged((PrivilegedAction<URL>) () -> createFileUrl(name, file));
 	}
 
 	@Override
@@ -118,7 +141,7 @@ public class RestartClassLoader extends URLClassLoader implements SmartClassLoad
 					loadedClass = findClass(name);
 				}
 				catch (ClassNotFoundException ex) {
-					loadedClass = Class.forName(name, false, getParent());
+					loadedClass = getParent().loadClass(name);
 				}
 			}
 			if (resolve) {
@@ -138,18 +161,10 @@ public class RestartClassLoader extends URLClassLoader implements SmartClassLoad
 		if (file.getKind() == Kind.DELETED) {
 			throw new ClassNotFoundException(name);
 		}
-		byte[] bytes = file.getContents();
-		return defineClass(name, bytes, 0, bytes.length);
-	}
-
-	@Override
-	public Class<?> publicDefineClass(String name, byte[] b, ProtectionDomain protectionDomain) {
-		return defineClass(name, b, 0, b.length, protectionDomain);
-	}
-
-	@Override
-	public ClassLoader getOriginalClassLoader() {
-		return getParent();
+		return AccessController.doPrivileged((PrivilegedAction<Class<?>>) () -> {
+			byte[] bytes = file.getContents();
+			return defineClass(name, bytes, 0, bytes.length);
+		});
 	}
 
 	private URL createFileUrl(String name, ClassLoaderFile file) {
@@ -159,6 +174,14 @@ public class RestartClassLoader extends URLClassLoader implements SmartClassLoad
 		catch (MalformedURLException ex) {
 			throw new IllegalStateException(ex);
 		}
+	}
+
+	@Override
+	protected void finalize() throws Throwable {
+		if (this.logger.isDebugEnabled()) {
+			this.logger.debug("Finalized classloader " + toString());
+		}
+		super.finalize();
 	}
 
 	@Override

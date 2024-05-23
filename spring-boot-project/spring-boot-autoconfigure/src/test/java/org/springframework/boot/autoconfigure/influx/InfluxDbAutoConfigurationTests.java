@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,34 +38,29 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Sergey Kuptsov
  * @author Stephane Nicoll
  * @author Eddú Meléndez
- * @author Moritz Halbritter
- * @author Andy Wilkinson
- * @author Phillip Webb
  */
-@SuppressWarnings("removal")
-@Deprecated(since = "3.2.0", forRemoval = true)
 class InfluxDbAutoConfigurationTests {
 
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withConfiguration(AutoConfigurations.of(InfluxDbAutoConfiguration.class));
+			.withConfiguration(AutoConfigurations.of(InfluxDbAutoConfiguration.class));
 
 	@Test
 	void influxDbRequiresUrl() {
-		this.contextRunner.run((context) -> assertThat(context).doesNotHaveBean(InfluxDB.class));
+		this.contextRunner.run((context) -> assertThat(context.getBeansOfType(InfluxDB.class)).isEmpty());
 	}
 
 	@Test
 	void influxDbCanBeCustomized() {
 		this.contextRunner
-			.withPropertyValues("spring.influx.url=http://localhost", "spring.influx.user=user",
-					"spring.influx.password=password")
-			.run((context) -> assertThat(context).hasSingleBean(InfluxDB.class));
+				.withPropertyValues("spring.influx.url=http://localhost", "spring.influx.password:password",
+						"spring.influx.user:user")
+				.run(((context) -> assertThat(context.getBeansOfType(InfluxDB.class)).hasSize(1)));
 	}
 
 	@Test
 	void influxDbCanBeCreatedWithoutCredentials() {
 		this.contextRunner.withPropertyValues("spring.influx.url=http://localhost").run((context) -> {
-			assertThat(context).hasSingleBean(InfluxDB.class);
+			assertThat(context.getBeansOfType(InfluxDB.class)).hasSize(1);
 			int readTimeout = getReadTimeoutProperty(context);
 			assertThat(readTimeout).isEqualTo(10_000);
 		});
@@ -74,28 +69,16 @@ class InfluxDbAutoConfigurationTests {
 	@Test
 	void influxDbWithOkHttpClientBuilderProvider() {
 		this.contextRunner.withUserConfiguration(CustomOkHttpClientBuilderProviderConfig.class)
-			.withPropertyValues("spring.influx.url=http://localhost")
-			.run((context) -> {
-				assertThat(context).hasSingleBean(InfluxDB.class);
-				int readTimeout = getReadTimeoutProperty(context);
-				assertThat(readTimeout).isEqualTo(40_000);
-			});
-	}
-
-	@Test
-	void influxDbWithCustomizer() {
-		this.contextRunner.withBean(InfluxDbCustomizer.class, () -> (influxDb) -> influxDb.setDatabase("test"))
-			.withPropertyValues("spring.influx.url=http://localhost")
-			.run((context) -> {
-				assertThat(context).hasSingleBean(InfluxDB.class);
-				InfluxDB influxDb = context.getBean(InfluxDB.class);
-				assertThat(influxDb).hasFieldOrPropertyWithValue("database", "test");
-			});
+				.withPropertyValues("spring.influx.url=http://localhost").run((context) -> {
+					assertThat(context.getBeansOfType(InfluxDB.class)).hasSize(1);
+					int readTimeout = getReadTimeoutProperty(context);
+					assertThat(readTimeout).isEqualTo(40_000);
+				});
 	}
 
 	private int getReadTimeoutProperty(AssertableApplicationContext context) {
-		InfluxDB influxDb = context.getBean(InfluxDB.class);
-		Retrofit retrofit = (Retrofit) ReflectionTestUtils.getField(influxDb, "retrofit");
+		InfluxDB influxDB = context.getBean(InfluxDB.class);
+		Retrofit retrofit = (Retrofit) ReflectionTestUtils.getField(influxDB, "retrofit");
 		OkHttpClient callFactory = (OkHttpClient) retrofit.callFactory();
 		return callFactory.readTimeoutMillis();
 	}
@@ -104,7 +87,6 @@ class InfluxDbAutoConfigurationTests {
 	static class CustomOkHttpClientBuilderProviderConfig {
 
 		@Bean
-		@SuppressWarnings("removal")
 		InfluxDbOkHttpClientBuilderProvider influxDbOkHttpClientBuilderProvider() {
 			return () -> new OkHttpClient.Builder().readTimeout(40, TimeUnit.SECONDS);
 		}

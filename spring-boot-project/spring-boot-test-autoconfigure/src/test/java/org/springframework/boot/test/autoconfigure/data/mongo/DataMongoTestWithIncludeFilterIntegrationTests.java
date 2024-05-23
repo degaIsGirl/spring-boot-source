@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,12 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.boot.testsupport.testcontainers.DockerImageNames;
+import org.springframework.boot.test.util.TestPropertyValues;
+import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.ComponentScan.Filter;
 import org.springframework.stereotype.Service;
+import org.springframework.test.context.ContextConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,18 +37,15 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Integration test with custom include filter for {@link DataMongoTest @DataMongoTest}.
  *
  * @author Michael Simons
- * @author Moritz Halbritter
- * @author Andy Wilkinson
- * @author Phillip Webb
  */
 @DataMongoTest(includeFilters = @Filter(Service.class))
 @Testcontainers(disabledWithoutDocker = true)
+@ContextConfiguration(initializers = DataMongoTestWithIncludeFilterIntegrationTests.Initializer.class)
 class DataMongoTestWithIncludeFilterIntegrationTests {
 
 	@Container
-	@ServiceConnection
-	static final MongoDBContainer mongoDB = new MongoDBContainer(DockerImageNames.mongo()).withStartupAttempts(5)
-		.withStartupTimeout(Duration.ofMinutes(5));
+	static final MongoDBContainer mongoDB = new MongoDBContainer("mongo:4.0.10").withStartupAttempts(5)
+			.withStartupTimeout(Duration.ofMinutes(5));
 
 	@Autowired
 	private ExampleService service;
@@ -54,6 +53,16 @@ class DataMongoTestWithIncludeFilterIntegrationTests {
 	@Test
 	void testService() {
 		assertThat(this.service.hasCollection("foobar")).isFalse();
+	}
+
+	static class Initializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
+
+		@Override
+		public void initialize(ConfigurableApplicationContext configurableApplicationContext) {
+			TestPropertyValues.of("spring.data.mongodb.uri=" + mongoDB.getReplicaSetUrl())
+					.applyTo(configurableApplicationContext.getEnvironment());
+		}
+
 	}
 
 }

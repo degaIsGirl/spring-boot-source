@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,11 @@ package org.springframework.boot.context.properties.source;
 import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.Answers;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 
 /**
  * Tests for {@link AliasedConfigurationPropertySource}.
@@ -36,7 +39,7 @@ class AliasedConfigurationPropertySourceTests {
 		source.put("foo.bar", "bing");
 		source.put("foo.baz", "biff");
 		ConfigurationPropertySource aliased = source.nonIterable()
-			.withAliases(new ConfigurationPropertyNameAliases("foo.bar", "foo.bar1"));
+				.withAliases(new ConfigurationPropertyNameAliases("foo.bar", "foo.bar1"));
 		assertThat(getValue(aliased, "foo.bar")).isEqualTo("bing");
 		assertThat(getValue(aliased, "foo.bar1")).isEqualTo("bing");
 	}
@@ -47,34 +50,39 @@ class AliasedConfigurationPropertySourceTests {
 		source.put("foo.bar", "bing");
 		source.put("foo.baz", "biff");
 		ConfigurationPropertySource aliased = source.nonIterable()
-			.withAliases(new ConfigurationPropertyNameAliases("foo.bar", "foo.bar1"));
+				.withAliases(new ConfigurationPropertyNameAliases("foo.bar", "foo.bar1"));
 		assertThat(getValue(aliased, "foo.baz")).isEqualTo("biff");
 	}
 
 	@Test
 	void containsDescendantOfWhenSourceReturnsUnknownShouldReturnUnknown() {
 		ConfigurationPropertyName name = ConfigurationPropertyName.of("foo");
-		ConfigurationPropertySource source = new KnownAncestorsConfigurationPropertySource().unknown(name);
+		ConfigurationPropertySource source = mock(ConfigurationPropertySource.class, Answers.CALLS_REAL_METHODS);
+		given(source.containsDescendantOf(name)).willReturn(ConfigurationPropertyState.UNKNOWN);
 		ConfigurationPropertySource aliased = source
-			.withAliases(new ConfigurationPropertyNameAliases("foo.bar", "foo.bar1"));
+				.withAliases(new ConfigurationPropertyNameAliases("foo.bar", "foo.bar1"));
 		assertThat(aliased.containsDescendantOf(name)).isEqualTo(ConfigurationPropertyState.UNKNOWN);
 	}
 
 	@Test
 	void containsDescendantOfWhenSourceReturnsPresentShouldReturnPresent() {
 		ConfigurationPropertyName name = ConfigurationPropertyName.of("foo");
-		ConfigurationPropertySource source = new KnownAncestorsConfigurationPropertySource().present(name)
-			.unknown(ConfigurationPropertyName.of("bar"));
+		ConfigurationPropertySource source = mock(ConfigurationPropertySource.class, Answers.CALLS_REAL_METHODS);
+		given(source.containsDescendantOf(name)).willReturn(ConfigurationPropertyState.PRESENT);
+		given(source.containsDescendantOf(ConfigurationPropertyName.of("bar")))
+				.willReturn(ConfigurationPropertyState.UNKNOWN);
 		ConfigurationPropertySource aliased = source
-			.withAliases(new ConfigurationPropertyNameAliases("foo.bar", "foo.bar1"));
+				.withAliases(new ConfigurationPropertyNameAliases("foo.bar", "foo.bar1"));
 		assertThat(aliased.containsDescendantOf(name)).isEqualTo(ConfigurationPropertyState.PRESENT);
 	}
 
 	@Test
 	void containsDescendantOfWhenAllAreAbsentShouldReturnAbsent() {
 		ConfigurationPropertyName name = ConfigurationPropertyName.of("foo");
-		ConfigurationPropertySource source = new KnownAncestorsConfigurationPropertySource().absent(name)
-			.absent(ConfigurationPropertyName.of("bar"));
+		ConfigurationPropertySource source = mock(ConfigurationPropertySource.class, Answers.CALLS_REAL_METHODS);
+		given(source.containsDescendantOf(name)).willReturn(ConfigurationPropertyState.ABSENT);
+		given(source.containsDescendantOf(ConfigurationPropertyName.of("bar")))
+				.willReturn(ConfigurationPropertyState.ABSENT);
 		ConfigurationPropertySource aliased = source.withAliases(new ConfigurationPropertyNameAliases("foo", "bar"));
 		assertThat(aliased.containsDescendantOf(name)).isEqualTo(ConfigurationPropertyState.ABSENT);
 	}
@@ -82,8 +90,10 @@ class AliasedConfigurationPropertySourceTests {
 	@Test
 	void containsDescendantOfWhenAnyIsPresentShouldReturnPresent() {
 		ConfigurationPropertyName name = ConfigurationPropertyName.of("foo");
-		ConfigurationPropertySource source = new KnownAncestorsConfigurationPropertySource().absent(name)
-			.present(ConfigurationPropertyName.of("bar"));
+		ConfigurationPropertySource source = mock(ConfigurationPropertySource.class, Answers.CALLS_REAL_METHODS);
+		given(source.containsDescendantOf(name)).willReturn(ConfigurationPropertyState.ABSENT);
+		given(source.containsDescendantOf(ConfigurationPropertyName.of("bar")))
+				.willReturn(ConfigurationPropertyState.PRESENT);
 		ConfigurationPropertySource aliased = source.withAliases(new ConfigurationPropertyNameAliases("foo", "bar"));
 		assertThat(aliased.containsDescendantOf(name)).isEqualTo(ConfigurationPropertyState.PRESENT);
 	}
@@ -93,9 +103,9 @@ class AliasedConfigurationPropertySourceTests {
 		ConfigurationPropertySource source = new MapConfigurationPropertySource(
 				Collections.singletonMap("foo.bar", "foobar"));
 		ConfigurationPropertySource aliased = source
-			.withAliases(new ConfigurationPropertyNameAliases("foo.bar", "baz.foo"));
+				.withAliases(new ConfigurationPropertyNameAliases("foo.bar", "baz.foo"));
 		assertThat(aliased.containsDescendantOf(ConfigurationPropertyName.of("baz")))
-			.isEqualTo(ConfigurationPropertyState.PRESENT);
+				.isEqualTo(ConfigurationPropertyState.PRESENT);
 	}
 
 	private Object getValue(ConfigurationPropertySource source, String name) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,9 +34,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class DiskSpaceHealthContributorAutoConfigurationTests {
 
-	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withConfiguration(AutoConfigurations.of(DiskSpaceHealthContributorAutoConfiguration.class,
-				HealthContributorAutoConfiguration.class));
+	private ApplicationContextRunner contextRunner = new ApplicationContextRunner().withConfiguration(AutoConfigurations
+			.of(DiskSpaceHealthContributorAutoConfiguration.class, HealthContributorAutoConfiguration.class));
 
 	@Test
 	void runShouldCreateIndicator() {
@@ -46,10 +45,8 @@ class DiskSpaceHealthContributorAutoConfigurationTests {
 	@Test
 	void thresholdMustBePositive() {
 		this.contextRunner.withPropertyValues("management.health.diskspace.threshold=-10MB")
-			.run((context) -> assertThat(context).hasFailed()
-				.getFailure()
-				.rootCause()
-				.hasMessage("threshold must be greater than or equal to 0"));
+				.run((context) -> assertThat(context).hasFailed().getFailure()
+						.hasMessageContaining("Failed to bind properties under 'management.health.diskspace'"));
 	}
 
 	@Test
@@ -62,15 +59,9 @@ class DiskSpaceHealthContributorAutoConfigurationTests {
 	}
 
 	@Test
-	void runWhenPathDoesNotExistShouldCreateIndicator() {
-		this.contextRunner.withPropertyValues("management.health.diskspace.path=does/not/exist")
-			.run((context) -> assertThat(context).hasSingleBean(DiskSpaceHealthIndicator.class));
-	}
-
-	@Test
 	void runWhenDisabledShouldNotCreateIndicator() {
 		this.contextRunner.withPropertyValues("management.health.diskspace.enabled:false")
-			.run((context) -> assertThat(context).doesNotHaveBean(DiskSpaceHealthIndicator.class));
+				.run((context) -> assertThat(context).doesNotHaveBean(DiskSpaceHealthIndicator.class));
 	}
 
 }

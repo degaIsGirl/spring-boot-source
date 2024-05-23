@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,13 @@
 
 package org.springframework.boot.autoconfigure.condition.scan;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBeanTests.ExampleFactoryBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
  * Configuration for a factory bean produced by a bean method with arguments on a
- * configuration class found through component scanning.
+ * configuration class found via component scanning.
  *
  * @author Andy Wilkinson
  */
@@ -34,8 +35,8 @@ public class ScannedFactoryBeanWithBeanMethodArgumentsConfiguration {
 	}
 
 	@Bean
-	public ScanFactoryBean exampleBeanFactoryBean(Foo foo) {
-		return new ScanFactoryBean("foo");
+	public ExampleFactoryBean exampleBeanFactoryBean(Foo foo) {
+		return new ExampleFactoryBean("foo");
 	}
 
 	static class Foo {

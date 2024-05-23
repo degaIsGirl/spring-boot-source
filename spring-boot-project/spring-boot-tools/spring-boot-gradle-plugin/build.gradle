@@ -1,149 +1,71 @@
-plugins {
-	id "java-gradle-plugin"
-	id "maven-publish"
-	id "org.antora"
-	id "org.springframework.boot.conventions"
-	id "org.springframework.boot.maven-repository"
-	id "org.springframework.boot.optional-dependencies"
+buildscript {
+	repositories {
+		mavenLocal()
+		mavenCentral()
+	}
+	dependencies {
+		classpath("io.spring.javaformat:spring-javaformat-gradle-plugin:0.0.15")
+	}
 }
 
-description = "Spring Boot Gradle Plugins"
+plugins {
+	id 'java'
+	id 'eclipse'
+}
 
-configurations {
-	antoraContent
-	"testCompileClasspath" {
-		// Downgrade SLF4J is required for tests to run in Eclipse
-		resolutionStrategy.force("org.slf4j:slf4j-api:1.7.36")
-	}
-	all {
-		resolutionStrategy {
-			eachDependency { dependency ->
-				// Downgrade Jackson as Gradle cannot cope with 2.15.0's multi-version
-				// jar files with bytecode in META-INF/versions/19
-				if (dependency.requested.group.startsWith("com.fasterxml.jackson")) {
-					dependency.useVersion("2.14.2")
-				}
-				// Downgrade Spring Framework as Gradle cannot cope with 6.1.0-M1's
-				// multi-version jar files with bytecode in META-INF/versions/21
-				if (dependency.requested.group.equals("org.springframework")) {
-					dependency.useVersion("6.0.10")
-				}
-			}
-		}
-	}
+apply plugin: 'io.spring.javaformat'
+
+repositories {
+	mavenLocal()
+	mavenCentral()
 }
 
 dependencies {
-	implementation(project(":spring-boot-project:spring-boot-tools:spring-boot-buildpack-platform"))
-	implementation(project(":spring-boot-project:spring-boot-tools:spring-boot-loader-tools"))
-	implementation("io.spring.gradle:dependency-management-plugin")
-	implementation("org.apache.commons:commons-compress")
-	implementation("org.springframework:spring-core")
-
-	optional("org.graalvm.buildtools:native-gradle-plugin")
-	optional("org.cyclonedx:cyclonedx-gradle-plugin") {
-		exclude(group: "org.apache.maven", module: "maven-core")
-	}
-	optional("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion") {
-		exclude(group: "commons-logging", module: "commons-logging")
-	}
-
-	testImplementation(project(":spring-boot-project:spring-boot-tools:spring-boot-test-support"))
-	testImplementation(project(":spring-boot-project:spring-boot-tools:spring-boot-gradle-test-support"))
-	testImplementation("com.tngtech.archunit:archunit-junit5:0.22.0")
-	testImplementation("org.assertj:assertj-core")
-	testImplementation("org.junit.jupiter:junit-jupiter")
-	testImplementation("org.mockito:mockito-core")
-	testImplementation("org.testcontainers:junit-jupiter")
-	testImplementation("org.testcontainers:testcontainers")
+	implementation localGroovy()
+	implementation gradleApi()
+	implementation fileTree(dir: 'target/dependencies/compile', include: '*.jar')
+	testImplementation gradleTestKit()
+	testImplementation 'org.apache.commons:commons-compress:1.13'
+	testImplementation fileTree(dir: 'target/dependencies/test', include: '*.jar')
 }
 
-repositories {
-	gradlePluginPortal() {
-		content {
-			includeGroup("org.cyclonedx")
-		}
+jar {
+	manifest {
+		attributes 'Implementation-Version': (version ? version : 'unknown')
 	}
 }
 
-gradlePlugin {
-	plugins {
-		springBootPlugin {
-			id = "org.springframework.boot"
-			displayName = "Spring Boot Gradle Plugin"
-			description = "Spring Boot Gradle Plugin"
-			implementationClass = "org.springframework.boot.gradle.plugin.SpringBootPlugin"
-		}
-		springBootAotPlugin {
-			id = "org.springframework.boot.aot"
-			displayName = "Spring Boot AOT Gradle Plugin"
-			description = "Spring Boot AOT Gradle Plugin"
-			implementationClass = "org.springframework.boot.gradle.plugin.SpringBootAotPlugin"
-		}
+test {
+	useJUnitPlatform()
+	testLogging {
+		events "passed", "skipped", "failed"
 	}
-}
-
-task preparePluginValidationClasses(type: Copy) {
-	destinationDir = layout.buildDirectory.dir("classes/java/pluginValidation").get().asFile
-	from(sourceSets.main.output.classesDirs) {
-		exclude "**/CreateBootStartScripts.class"
-	}
-}
-
-validatePlugins {
-	classes.setFrom preparePluginValidationClasses
-	enableStricterValidation = true
-}
-
-tasks.named('test') {
-	inputs.dir('src/docs/antora/modules/gradle-plugin/examples').withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName('buildScripts')
 }
 
 javadoc {
 	options {
-		author = true
-		docTitle = "Spring Boot Gradle Plugin ${project.version} API"
-		encoding = "UTF-8"
-		memberLevel = "protected"
-		outputLevel = "quiet"
-		splitIndex = true
-		use = true
-		windowTitle = "Spring Boot Gradle Plugin ${project.version} API"
-		links "https://docs.gradle.org/$gradle.gradleVersion/javadoc/"
-		links "https://docs.oracle.com/en/java/javase/17/docs/api/"
+		author()
+		stylesheetFile = file('src/main/javadoc/spring-javadoc.css')
+		links = [
+			'https://docs.oracle.com/javase/8/docs/api/',
+			'https://docs.gradle.org/current/javadoc/'
+		]
+		source = '8'
 	}
+	title = "${project.description} $version API"
 }
 
-def antoraGradlePluginLocalAggregateContent  = tasks.register("antoraGradlePluginLocalAggregateContent", Zip) {
-	destinationDirectory = layout.buildDirectory.dir('generated/docs/antora-content')
-	archiveClassifier = "gradle-plugin-local-aggregate-content"
-	from(tasks.getByName("generateAntoraYml")) {
-		into "modules"
-	}
+task sourcesJar(type: Jar) {
+	classifier = 'sources'
+	from sourceSets.main.allSource
 }
 
-def antoraGradlePluginCatalogContent = tasks.register("antoraGradlePluginCatalogContent", Zip) {
-	destinationDirectory = layout.buildDirectory.dir('generated/docs/antora-content')
-	archiveClassifier = "gradle-plugin-catalog-content"
-	from(javadoc) {
-		into "api/java"
-	}
-}
-
-tasks.named("generateAntoraPlaybook") {
-	xrefStubs = ["appendix:.*", "api:.*", "reference:.*"]
-	alwaysInclude = [name: "gradle-plugin", classifier: "local-aggregate-content"]
-	dependsOn antoraGradlePluginLocalAggregateContent
-}
-
-tasks.named("antora") {
-	inputs.files(antoraGradlePluginLocalAggregateContent, antoraGradlePluginCatalogContent)
+task javadocJar(type: Jar) {
+	classifier = "javadoc"
+	from javadoc
 }
 
 artifacts {
-	antoraContent antoraGradlePluginCatalogContent
-}
-
-toolchain {
-	maximumCompatibleJavaVersion = JavaLanguageVersion.of(20)
+	archives sourcesJar
+	archives javadocJar
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,9 @@ import org.springframework.core.annotation.Order;
 /**
  * Specialized {@link Configuration @Configuration} class that defines configuration
  * specific for the management context. Configurations should be registered in
- * {@code /META-INF/spring/org.springframework.boot.actuate.autoconfigure.web.ManagementContextConfiguration.imports}.
+ * {@code /META-INF/spring.factories} under the
+ * {@code org.springframework.boot.actuate.autoconfigure.web.ManagementContextConfiguration}
+ * key.
  * <p>
  * {@code ManagementContextConfiguration} classes can be ordered using
  * {@link Order @Order}. Ordering by implementing {@link Ordered} is not supported and
@@ -57,7 +59,7 @@ public @interface ManagementContextConfiguration {
 
 	/**
 	 * Specify whether {@link Bean @Bean} methods should get proxied in order to enforce
-	 * bean lifecycle behavior, e.g. to return shared singleton bean instances even in
+	 * bean ioc behavior, e.g. to return shared singleton bean instances even in
 	 * case of direct {@code @Bean} method calls in user code. This feature requires
 	 * method interception, implemented through a runtime-generated CGLIB subclass which
 	 * comes with limitations such as the configuration class and its methods not being

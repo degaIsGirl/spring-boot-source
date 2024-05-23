@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,16 @@
 
 package org.springframework.boot.web.embedded.jetty;
 
-import org.eclipse.jetty.http.HttpFields.Mutable;
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.eclipse.jetty.http.HttpMethod;
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.Response;
+import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.eclipse.jetty.server.handler.gzip.GzipHandler;
-import org.eclipse.jetty.util.Callback;
 
 import org.springframework.boot.web.server.Compression;
 
@@ -36,24 +39,27 @@ final class JettyHandlerWrappers {
 	private JettyHandlerWrappers() {
 	}
 
-	static Handler.Wrapper createGzipHandlerWrapper(Compression compression) {
+	static HandlerWrapper createGzipHandlerWrapper(Compression compression) {
 		GzipHandler handler = new GzipHandler();
 		handler.setMinGzipSize((int) compression.getMinResponseSize().toBytes());
 		handler.setIncludedMimeTypes(compression.getMimeTypes());
 		for (HttpMethod httpMethod : HttpMethod.values()) {
 			handler.addIncludedMethods(httpMethod.name());
 		}
+		if (compression.getExcludedUserAgents() != null) {
+			handler.setExcludedAgentPatterns(compression.getExcludedUserAgents());
+		}
 		return handler;
 	}
 
-	static Handler.Wrapper createServerHeaderHandlerWrapper(String header) {
+	static HandlerWrapper createServerHeaderHandlerWrapper(String header) {
 		return new ServerHeaderHandler(header);
 	}
 
 	/**
-	 * {@link Handler.Wrapper} to add a custom {@code server} header.
+	 * {@link HandlerWrapper} to add a custom {@code server} header.
 	 */
-	private static class ServerHeaderHandler extends Handler.Wrapper {
+	private static class ServerHeaderHandler extends HandlerWrapper {
 
 		private static final String SERVER_HEADER = "server";
 
@@ -64,12 +70,12 @@ final class JettyHandlerWrappers {
 		}
 
 		@Override
-		public boolean handle(Request request, Response response, Callback callback) throws Exception {
-			Mutable headers = response.getHeaders();
-			if (!headers.contains(SERVER_HEADER)) {
-				headers.add(SERVER_HEADER, this.value);
+		public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response)
+				throws IOException, ServletException {
+			if (!response.getHeaderNames().contains(SERVER_HEADER)) {
+				response.setHeader(SERVER_HEADER, this.value);
 			}
-			return super.handle(request, response, callback);
+			super.handle(target, baseRequest, request, response);
 		}
 
 	}

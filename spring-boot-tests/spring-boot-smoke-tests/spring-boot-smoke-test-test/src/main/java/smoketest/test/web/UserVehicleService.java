@@ -26,7 +26,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
 /**
- * Controller service used to provide vehicle information for a given user.
+ * Controller services used to provide vehicle information for a given user.
  *
  * @author Phillip Webb
  */

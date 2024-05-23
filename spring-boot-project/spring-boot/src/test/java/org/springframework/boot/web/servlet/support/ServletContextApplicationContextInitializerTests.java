@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,16 @@
 
 package org.springframework.boot.web.servlet.support;
 
-import jakarta.servlet.ServletContext;
+import javax.servlet.ServletContext;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.web.context.ConfigurableWebApplicationContext;
 import org.springframework.web.context.WebApplicationContext;
 
-import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 /**
  * Tests for {@link ServletContextApplicationContextInitializer}.
@@ -40,21 +41,21 @@ class ServletContextApplicationContextInitializerTests {
 	@Test
 	void servletContextIsSetOnTheApplicationContext() {
 		new ServletContextApplicationContextInitializer(this.servletContext).initialize(this.applicationContext);
-		then(this.applicationContext).should().setServletContext(this.servletContext);
+		verify(this.applicationContext).setServletContext(this.servletContext);
 	}
 
 	@Test
 	void applicationContextIsNotStoredInServletContextByDefault() {
 		new ServletContextApplicationContextInitializer(this.servletContext).initialize(this.applicationContext);
-		then(this.servletContext).should(never())
-			.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, this.applicationContext);
+		verify(this.servletContext, never()).setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE,
+				this.applicationContext);
 	}
 
 	@Test
 	void applicationContextCanBeStoredInServletContext() {
 		new ServletContextApplicationContextInitializer(this.servletContext, true).initialize(this.applicationContext);
-		then(this.servletContext).should()
-			.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, this.applicationContext);
+		verify(this.servletContext).setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE,
+				this.applicationContext);
 	}
 
 }

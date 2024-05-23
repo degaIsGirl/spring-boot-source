@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,12 @@ package org.springframework.boot.autoconfigure.web.servlet.error;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-import jakarta.servlet.Servlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.Servlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -30,7 +32,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionMessage;
 import org.springframework.boot.autoconfigure.condition.ConditionOutcome;
@@ -44,9 +46,8 @@ import org.springframework.boot.autoconfigure.condition.SearchStrategy;
 import org.springframework.boot.autoconfigure.condition.SpringBootCondition;
 import org.springframework.boot.autoconfigure.template.TemplateAvailabilityProvider;
 import org.springframework.boot.autoconfigure.template.TemplateAvailabilityProviders;
+import org.springframework.boot.autoconfigure.web.ResourceProperties;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
-import org.springframework.boot.autoconfigure.web.WebProperties;
-import org.springframework.boot.autoconfigure.web.WebProperties.Resources;
 import org.springframework.boot.autoconfigure.web.servlet.DispatcherServletPath;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcProperties;
@@ -72,21 +73,21 @@ import org.springframework.web.servlet.view.BeanNameViewResolver;
 import org.springframework.web.util.HtmlUtils;
 
 /**
- * {@link EnableAutoConfiguration Auto-configuration} to render errors through an MVC
- * error controller.
+ * {@link EnableAutoConfiguration Auto-configuration} to render errors via an MVC error
+ * controller.
  *
  * @author Dave Syer
  * @author Andy Wilkinson
  * @author Stephane Nicoll
  * @author Brian Clozel
- * @author Scott Frederick
  * @since 1.0.0
  */
-// Load before the main WebMvcAutoConfiguration so that the error View is available
-@AutoConfiguration(before = WebMvcAutoConfiguration.class)
+@Configuration(proxyBeanMethods = false)
 @ConditionalOnWebApplication(type = Type.SERVLET)
 @ConditionalOnClass({ Servlet.class, DispatcherServlet.class })
-@EnableConfigurationProperties({ ServerProperties.class, WebMvcProperties.class })
+// Load before the main WebMvcAutoConfiguration so that the error View is available
+@AutoConfigureBefore(WebMvcAutoConfiguration.class)
+@EnableConfigurationProperties({ ServerProperties.class, ResourceProperties.class, WebMvcProperties.class })
 public class ErrorMvcAutoConfiguration {
 
 	private final ServerProperties serverProperties;
@@ -98,7 +99,7 @@ public class ErrorMvcAutoConfiguration {
 	@Bean
 	@ConditionalOnMissingBean(value = ErrorAttributes.class, search = SearchStrategy.CURRENT)
 	public DefaultErrorAttributes errorAttributes() {
-		return new DefaultErrorAttributes();
+		return new DefaultErrorAttributes(this.serverProperties.getError().isIncludeException());
 	}
 
 	@Bean
@@ -106,7 +107,7 @@ public class ErrorMvcAutoConfiguration {
 	public BasicErrorController basicErrorController(ErrorAttributes errorAttributes,
 			ObjectProvider<ErrorViewResolver> errorViewResolvers) {
 		return new BasicErrorController(errorAttributes, this.serverProperties.getError(),
-				errorViewResolvers.orderedStream().toList());
+				errorViewResolvers.orderedStream().collect(Collectors.toList()));
 	}
 
 	@Bean
@@ -120,23 +121,23 @@ public class ErrorMvcAutoConfiguration {
 	}
 
 	@Configuration(proxyBeanMethods = false)
-	@EnableConfigurationProperties({ WebProperties.class, WebMvcProperties.class })
 	static class DefaultErrorViewResolverConfiguration {
 
 		private final ApplicationContext applicationContext;
 
-		private final Resources resources;
+		private final ResourceProperties resourceProperties;
 
-		DefaultErrorViewResolverConfiguration(ApplicationContext applicationContext, WebProperties webProperties) {
+		DefaultErrorViewResolverConfiguration(ApplicationContext applicationContext,
+				ResourceProperties resourceProperties) {
 			this.applicationContext = applicationContext;
-			this.resources = webProperties.getResources();
+			this.resourceProperties = resourceProperties;
 		}
 
 		@Bean
 		@ConditionalOnBean(DispatcherServlet.class)
 		@ConditionalOnMissingBean(ErrorViewResolver.class)
 		DefaultErrorViewResolver conventionErrorViewResolver() {
-			return new DefaultErrorViewResolver(this.applicationContext, this.resources);
+			return new DefaultErrorViewResolver(this.applicationContext, this.resourceProperties);
 		}
 
 	}
@@ -169,7 +170,7 @@ public class ErrorMvcAutoConfiguration {
 	/**
 	 * {@link SpringBootCondition} that matches when no error template view is detected.
 	 */
-	private static final class ErrorTemplateMissingCondition extends SpringBootCondition {
+	private static class ErrorTemplateMissingCondition extends SpringBootCondition {
 
 		@Override
 		public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
@@ -188,7 +189,7 @@ public class ErrorMvcAutoConfiguration {
 	/**
 	 * Simple {@link View} implementation that writes a default HTML error page.
 	 */
-	private static final class StaticView implements View {
+	private static class StaticView implements View {
 
 		private static final MediaType TEXT_HTML_UTF8 = new MediaType("text", "html", StandardCharsets.UTF_8);
 
@@ -210,16 +211,11 @@ public class ErrorMvcAutoConfiguration {
 			if (response.getContentType() == null) {
 				response.setContentType(getContentType());
 			}
-			builder.append("<html><body><h1>Whitelabel Error Page</h1>")
-				.append("<p>This application has no explicit mapping for /error, so you are seeing this as a fallback.</p>")
-				.append("<div id='created'>")
-				.append(timestamp)
-				.append("</div>")
-				.append("<div>There was an unexpected error (type=")
-				.append(htmlEscape(model.get("error")))
-				.append(", status=")
-				.append(htmlEscape(model.get("status")))
-				.append(").</div>");
+			builder.append("<html><body><h1>Whitelabel Error Page</h1>").append(
+					"<p>This application has no explicit mapping for /error, so you are seeing this as a fallback.</p>")
+					.append("<div id='created'>").append(timestamp).append("</div>")
+					.append("<div>There was an unexpected error (type=").append(htmlEscape(model.get("error")))
+					.append(", status=").append(htmlEscape(model.get("status"))).append(").</div>");
 			if (message != null) {
 				builder.append("<div>").append(htmlEscape(message)).append("</div>");
 			}
@@ -255,7 +251,7 @@ public class ErrorMvcAutoConfiguration {
 	/**
 	 * {@link WebServerFactoryCustomizer} that configures the server's error pages.
 	 */
-	static class ErrorPageCustomizer implements ErrorPageRegistrar, Ordered {
+	private static class ErrorPageCustomizer implements ErrorPageRegistrar, Ordered {
 
 		private final ServerProperties properties;
 
@@ -292,7 +288,7 @@ public class ErrorMvcAutoConfiguration {
 			for (String errorControllerBean : errorControllerBeans) {
 				try {
 					beanFactory.getBeanDefinition(errorControllerBean)
-						.setAttribute(AutoProxyUtils.PRESERVE_TARGET_CLASS_ATTRIBUTE, Boolean.TRUE);
+							.setAttribute(AutoProxyUtils.PRESERVE_TARGET_CLASS_ATTRIBUTE, Boolean.TRUE);
 				}
 				catch (Throwable ex) {
 					// Ignore

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import java.util.Iterator;
 
 import org.junit.jupiter.api.Test;
 
-import org.springframework.boot.env.RandomValuePropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
@@ -43,7 +42,7 @@ class SpringConfigurationPropertySourcesTests {
 	@Test
 	void createWhenPropertySourcesIsNullShouldThrowException() {
 		assertThatIllegalArgumentException().isThrownBy(() -> new SpringConfigurationPropertySources(null))
-			.withMessageContaining("Sources must not be null");
+				.withMessageContaining("Sources must not be null");
 	}
 
 	@Test
@@ -82,8 +81,8 @@ class SpringConfigurationPropertySourcesTests {
 	@Test
 	void shouldNotAdaptSystemEnvironmentPropertyOverrideSource() {
 		MutablePropertySources sources = new MutablePropertySources();
-		sources
-			.addLast(new SystemEnvironmentPropertySource("override", Collections.singletonMap("server.port", "1234")));
+		sources.addLast(
+				new SystemEnvironmentPropertySource("override", Collections.singletonMap("server.port", "1234")));
 		Iterator<ConfigurationPropertySource> iterator = new SpringConfigurationPropertySources(sources).iterator();
 		ConfigurationPropertyName name = ConfigurationPropertyName.of("server.port");
 		assertThat(iterator.next().getConfigurationProperty(name).getValue()).isEqualTo("1234");
@@ -112,7 +111,7 @@ class SpringConfigurationPropertySourcesTests {
 		assertThat(iterator.next().getConfigurationProperty(name).getValue()).isEqualTo("1234");
 		assertThat(iterator.next().getConfigurationProperty(name).getValue()).isEqualTo("4567");
 		assertThat(iterator.next().getConfigurationProperty(ConfigurationPropertyName.of("a")).getValue())
-			.isEqualTo("b");
+				.isEqualTo("b");
 		assertThat(iterator.hasNext()).isFalse();
 	}
 
@@ -139,7 +138,7 @@ class SpringConfigurationPropertySourcesTests {
 	void shouldTrackChanges() {
 		MutablePropertySources sources = new MutablePropertySources();
 		SpringConfigurationPropertySources configurationSources = new SpringConfigurationPropertySources(sources);
-		assertThat(configurationSources.iterator()).toIterable().isEmpty();
+		assertThat(configurationSources.iterator()).toIterable().hasSize(0);
 		MapPropertySource source1 = new MapPropertySource("test1", Collections.singletonMap("a", "b"));
 		sources.addLast(source1);
 		assertThat(configurationSources.iterator()).toIterable().hasSize(1);
@@ -160,16 +159,6 @@ class SpringConfigurationPropertySourcesTests {
 		sources.remove("test");
 		sources.addLast(source2);
 		assertThat(configurationSources.iterator().next().getConfigurationProperty(name).getValue()).isEqualTo("s2");
-	}
-
-	@Test // gh-21659
-	void shouldAdaptRandomPropertySource() {
-		MutablePropertySources sources = new MutablePropertySources();
-		sources.addFirst(new RandomValuePropertySource());
-		Iterator<ConfigurationPropertySource> iterator = new SpringConfigurationPropertySources(sources).iterator();
-		ConfigurationPropertyName name = ConfigurationPropertyName.of("random.int");
-		assertThat(iterator.next().getConfigurationProperty(name).getValue()).isNotNull();
-		assertThat(iterator.hasNext()).isFalse();
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.annotation.Condition;
 import org.springframework.context.annotation.ConditionContext;
@@ -80,7 +81,10 @@ public final class ConditionEvaluationReport {
 		Assert.notNull(condition, "Condition must not be null");
 		Assert.notNull(outcome, "Outcome must not be null");
 		this.unconditionalClasses.remove(source);
-		this.outcomes.computeIfAbsent(source, (key) -> new ConditionAndOutcomes()).add(condition, outcome);
+		if (!this.outcomes.containsKey(source)) {
+			this.outcomes.put(source, new ConditionAndOutcomes());
+		}
+		this.outcomes.get(source).add(condition, outcome);
 		this.addedAncestorOutcomes = false;
 	}
 
@@ -124,7 +128,7 @@ public final class ConditionEvaluationReport {
 		this.outcomes.forEach((candidateSource, sourceOutcomes) -> {
 			if (candidateSource.startsWith(prefix)) {
 				ConditionOutcome outcome = ConditionOutcome
-					.noMatch(ConditionMessage.forCondition("Ancestor " + source).because("did not match"));
+						.noMatch(ConditionMessage.forCondition("Ancestor " + source).because("did not match"));
 				sourceOutcomes.add(ANCESTOR_CONDITION, outcome);
 			}
 		});
@@ -144,7 +148,7 @@ public final class ConditionEvaluationReport {
 	 */
 	public Set<String> getUnconditionalClasses() {
 		Set<String> filtered = new HashSet<>(this.unconditionalClasses);
-		this.exclusions.forEach(filtered::remove);
+		filtered.removeAll(this.exclusions);
 		return Collections.unmodifiableSet(filtered);
 	}
 
@@ -163,7 +167,7 @@ public final class ConditionEvaluationReport {
 	 * @return the {@link ConditionEvaluationReport} or {@code null}
 	 */
 	public static ConditionEvaluationReport find(BeanFactory beanFactory) {
-		if (beanFactory instanceof ConfigurableListableBeanFactory) {
+		if (beanFactory != null && beanFactory instanceof ConfigurableBeanFactory) {
 			return ConditionEvaluationReport.get((ConfigurableListableBeanFactory) beanFactory);
 		}
 		return null;
@@ -291,7 +295,7 @@ public final class ConditionEvaluationReport {
 
 	}
 
-	private static final class AncestorsMatchedCondition implements Condition {
+	private static class AncestorsMatchedCondition implements Condition {
 
 		@Override
 		public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {

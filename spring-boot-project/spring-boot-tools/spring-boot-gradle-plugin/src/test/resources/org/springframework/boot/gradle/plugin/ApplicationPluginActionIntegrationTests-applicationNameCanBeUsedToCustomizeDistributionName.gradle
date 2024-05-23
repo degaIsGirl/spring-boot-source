@@ -4,10 +4,8 @@ plugins {
 	id 'org.springframework.boot' version '{version}'
 }
 
-application {
-	applicationName = 'custom'
-}
+applicationName = 'custom'
 
 bootJar {
-	mainClass = 'com.example.ExampleApplication'
+	mainClassName = 'com.example.ExampleApplication'
 }

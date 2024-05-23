@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,10 @@ import java.io.ObjectOutputStream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
 import org.springframework.boot.devtools.restart.classloader.ClassLoaderFile;
 import org.springframework.boot.devtools.restart.classloader.ClassLoaderFile.Kind;
@@ -36,15 +37,14 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.mockito.ArgumentMatchers.assertArg;
-import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 /**
  * Tests for {@link HttpRestartServer}.
  *
  * @author Phillip Webb
  */
-@ExtendWith(MockitoExtension.class)
 class HttpRestartServerTests {
 
 	@Mock
@@ -52,21 +52,25 @@ class HttpRestartServerTests {
 
 	private HttpRestartServer server;
 
+	@Captor
+	private ArgumentCaptor<ClassLoaderFiles> filesCaptor;
+
 	@BeforeEach
 	void setup() {
+		MockitoAnnotations.initMocks(this);
 		this.server = new HttpRestartServer(this.delegate);
 	}
 
 	@Test
-	void sourceDirectoryUrlFilterMustNotBeNull() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new HttpRestartServer((SourceDirectoryUrlFilter) null))
-			.withMessageContaining("SourceDirectoryUrlFilter must not be null");
+	void sourceFolderUrlFilterMustNotBeNull() {
+		assertThatIllegalArgumentException().isThrownBy(() -> new HttpRestartServer((SourceFolderUrlFilter) null))
+				.withMessageContaining("SourceFolderUrlFilter must not be null");
 	}
 
 	@Test
 	void restartServerMustNotBeNull() {
 		assertThatIllegalArgumentException().isThrownBy(() -> new HttpRestartServer((RestartServer) null))
-			.withMessageContaining("RestartServer must not be null");
+				.withMessageContaining("RestartServer must not be null");
 	}
 
 	@Test
@@ -78,9 +82,8 @@ class HttpRestartServerTests {
 		byte[] bytes = serialize(files);
 		request.setContent(bytes);
 		this.server.handle(new ServletServerHttpRequest(request), new ServletServerHttpResponse(response));
-		then(this.delegate).should()
-			.updateAndRestart(
-					assertArg((classLoaderFiles) -> assertThat(classLoaderFiles.getFile("name")).isNotNull()));
+		verify(this.delegate).updateAndRestart(this.filesCaptor.capture());
+		assertThat(this.filesCaptor.getValue().getFile("name")).isNotNull();
 		assertThat(response.getStatus()).isEqualTo(200);
 	}
 
@@ -89,7 +92,7 @@ class HttpRestartServerTests {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		MockHttpServletResponse response = new MockHttpServletResponse();
 		this.server.handle(new ServletServerHttpRequest(request), new ServletServerHttpResponse(response));
-		then(this.delegate).shouldHaveNoInteractions();
+		verifyNoInteractions(this.delegate);
 		assertThat(response.getStatus()).isEqualTo(500);
 
 	}
@@ -100,7 +103,7 @@ class HttpRestartServerTests {
 		MockHttpServletResponse response = new MockHttpServletResponse();
 		request.setContent(new byte[] { 0, 0, 0 });
 		this.server.handle(new ServletServerHttpRequest(request), new ServletServerHttpResponse(response));
-		then(this.delegate).shouldHaveNoInteractions();
+		verifyNoInteractions(this.delegate);
 		assertThat(response.getStatus()).isEqualTo(500);
 	}
 

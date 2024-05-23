@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,71 +19,58 @@ package org.springframework.boot.gradle.tasks.bundling;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import org.apache.commons.compress.archivers.zip.UnixStat;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.gradle.api.file.FileTreeElement;
-
-import org.springframework.boot.loader.tools.LoaderImplementation;
-import org.springframework.util.StreamUtils;
+import org.gradle.api.specs.Spec;
 
 /**
  * Internal utility used to copy entries from the {@code spring-boot-loader.jar}.
  *
  * @author Andy Wilkinson
  * @author Phillip Webb
- * @author Scott Frederick
  */
 class LoaderZipEntries {
 
-	private final LoaderImplementation loaderImplementation;
+	private Long entryTime;
 
-	private final Long entryTime;
-
-	private final int dirMode;
-
-	private final int fileMode;
-
-	LoaderZipEntries(Long entryTime, int dirMode, int fileMode, LoaderImplementation loaderImplementation) {
+	LoaderZipEntries(Long entryTime) {
 		this.entryTime = entryTime;
-		this.dirMode = dirMode;
-		this.fileMode = fileMode;
-		this.loaderImplementation = (loaderImplementation != null) ? loaderImplementation
-				: LoaderImplementation.DEFAULT;
 	}
 
-	WrittenEntries writeTo(ZipArchiveOutputStream out) throws IOException {
-		WrittenEntries written = new WrittenEntries();
+	Spec<FileTreeElement> writeTo(ZipArchiveOutputStream zipOutputStream) throws IOException {
+		WrittenDirectoriesSpec writtenDirectoriesSpec = new WrittenDirectoriesSpec();
 		try (ZipInputStream loaderJar = new ZipInputStream(
-				getClass().getResourceAsStream("/" + this.loaderImplementation.getJarResourceName()))) {
+				getClass().getResourceAsStream("/META-INF/loader/spring-boot-loader.jar"))) {
 			java.util.zip.ZipEntry entry = loaderJar.getNextEntry();
 			while (entry != null) {
 				if (entry.isDirectory() && !entry.getName().equals("META-INF/")) {
-					writeDirectory(new ZipArchiveEntry(entry), out);
-					written.addDirectory(entry);
+					writeDirectory(new ZipArchiveEntry(entry), zipOutputStream);
+					writtenDirectoriesSpec.add(entry);
 				}
-				else if (entry.getName().endsWith(".class") || entry.getName().startsWith("META-INF/services/")) {
-					writeFile(new ZipArchiveEntry(entry), loaderJar, out);
-					written.addFile(entry);
+				else if (entry.getName().endsWith(".class")) {
+					writeClass(new ZipArchiveEntry(entry), loaderJar, zipOutputStream);
 				}
 				entry = loaderJar.getNextEntry();
 			}
 		}
-		return written;
+		return writtenDirectoriesSpec;
 	}
 
 	private void writeDirectory(ZipArchiveEntry entry, ZipArchiveOutputStream out) throws IOException {
-		prepareEntry(entry, this.dirMode);
+		prepareEntry(entry, UnixStat.DIR_FLAG | UnixStat.DEFAULT_DIR_PERM);
 		out.putArchiveEntry(entry);
 		out.closeArchiveEntry();
 	}
 
-	private void writeFile(ZipArchiveEntry entry, ZipInputStream in, ZipArchiveOutputStream out) throws IOException {
-		prepareEntry(entry, this.fileMode);
+	private void writeClass(ZipArchiveEntry entry, ZipInputStream in, ZipArchiveOutputStream out) throws IOException {
+		prepareEntry(entry, UnixStat.FILE_FLAG | UnixStat.DEFAULT_FILE_PERM);
 		out.putArchiveEntry(entry);
 		copy(in, out);
 		out.closeArchiveEntry();
@@ -91,42 +78,37 @@ class LoaderZipEntries {
 
 	private void prepareEntry(ZipArchiveEntry entry, int unixMode) {
 		if (this.entryTime != null) {
-			entry.setTime(DefaultTimeZoneOffset.INSTANCE.removeFrom(this.entryTime));
+			entry.setTime(this.entryTime);
 		}
 		entry.setUnixMode(unixMode);
 	}
 
 	private void copy(InputStream in, OutputStream out) throws IOException {
-		StreamUtils.copy(in, out);
+		byte[] buffer = new byte[4096];
+		int bytesRead = -1;
+		while ((bytesRead = in.read(buffer)) != -1) {
+			out.write(buffer, 0, bytesRead);
+		}
 	}
 
 	/**
-	 * Tracks entries that have been written.
+	 * Spec to track directories that have been written.
 	 */
-	static class WrittenEntries {
+	private static class WrittenDirectoriesSpec implements Spec<FileTreeElement> {
 
-		private final Set<String> directories = new LinkedHashSet<>();
+		private final Set<String> entries = new HashSet<>();
 
-		private final Set<String> files = new LinkedHashSet<>();
-
-		private void addDirectory(ZipEntry entry) {
-			this.directories.add(entry.getName());
-		}
-
-		private void addFile(ZipEntry entry) {
-			this.files.add(entry.getName());
-		}
-
-		boolean isWrittenDirectory(FileTreeElement element) {
+		@Override
+		public boolean isSatisfiedBy(FileTreeElement element) {
 			String path = element.getRelativePath().getPathString();
 			if (element.isDirectory() && !path.endsWith(("/"))) {
 				path += "/";
 			}
-			return this.directories.contains(path);
+			return this.entries.contains(path);
 		}
 
-		Set<String> getFiles() {
-			return this.files;
+		void add(ZipEntry entry) {
+			this.entries.add(entry.getName());
 		}
 
 	}
