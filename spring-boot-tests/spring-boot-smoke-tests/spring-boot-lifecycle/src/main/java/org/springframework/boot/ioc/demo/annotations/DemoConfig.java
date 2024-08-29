@@ -1,5 +1,6 @@
 package org.springframework.boot.ioc.demo.annotations;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.ioc.demo.common.imports.Menu;
 import org.springframework.context.annotation.*;
 
@@ -10,6 +11,7 @@ import org.springframework.context.annotation.*;
 		"org.springframework.boot.ioc.demo.common.processors"
 })
 @Import(Menu.class)
+@ConditionalOnClass
 public class DemoConfig {
 
 }
